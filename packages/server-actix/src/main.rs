@@ -1,12 +1,19 @@
 mod api;
-mod services;
+mod common;
 mod entities;
+mod services;
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    error, get, middleware, post, web, App, HttpMessage, HttpResponse, HttpServer, Responder,
+};
+use actix_web_httpauth::{extractors::bearer::BearerAuth, middleware::HttpAuthentication};
 use api::user::get_user_scope;
+use common::{AppState, Claims};
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use log::{debug, info};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use sea_orm::Database;
 use std::env;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -24,40 +31,68 @@ async fn manual_hello() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
     // init db
     dotenv::dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
     let db = Database::connect(database_url).await;
-    println!("db connected: {:?}", db);
+    info!("db connected: {:?}", db);
 
     // init ssl
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
+    let mut ssl_builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    ssl_builder
         .set_private_key_file("key.pem", SslFiletype::PEM)
         .unwrap();
-    builder.set_certificate_chain_file("cert.pem").unwrap();
+    ssl_builder.set_certificate_chain_file("cert.pem").unwrap();
 
+    let state = AppState {
+        jwt_secret: env::var("JWT_SECRET").expect("JWT_SECRET must be set in .env file"),
+        db_conn: db.unwrap(),
+    };
     // start server
     let server_url = env::var("SERVER_URL").expect("SERVER_URL must be set in .env file");
-    let server = HttpServer::new(|| {
+    let server = HttpServer::new(move || {
         App::new()
-        .wrap_fn(|req, srv | {
-            todo!("middleware");
-            println!("Hi from start. You requested: {}", req.path());
-            srv.call(req).map(|res| {
-                println!("Hi from response");
-                res
-            })
-        })
+            .app_data(web::Data::new(state.clone()))
+            .wrap(middleware::Logger::default())
+            .wrap(HttpAuthentication::with_fn(
+                |req, credentials: Option<BearerAuth>| async move {
+                    let path = req.path();
+                    debug!("path: {}", path);
+                    if path == "/api/user/login" {
+                        return Ok(req);
+                    }
+
+                    let Some(credentials) = credentials else {
+                        return Err((error::ErrorUnauthorized("unauthorized"), req));
+                    };
+                    let validation = Validation::default();
+
+                    let decoding_key = DecodingKey::from_secret(
+                        req.app_data::<web::Data<AppState>>().unwrap().jwt_secret.as_ref(),
+                    );
+
+                    let Ok(data) =
+                        decode::<Claims>(credentials.token(), &decoding_key, &validation)
+                    else {
+                        return Err((error::ErrorUnauthorized("unauthorized"), req));
+                    };
+                    // 保存用户信息
+                    req.extensions_mut().insert(data.claims);
+
+                    debug!("id: {}", req.extensions().get::<Claims>().unwrap().id);
+                    Ok(req)
+                },
+            ))
             .service(get_user_scope())
             .service(hello)
             .service(echo)
             .route("/hey", web::get().to(manual_hello))
     })
-    .bind_openssl(server_url.as_str(), builder)?
+    .bind_openssl(server_url.as_str(), ssl_builder)?
+    .workers(1)
     .run();
 
-    println!("Server running at https://{server_url}");
+    info!("Server running at https://{server_url}");
     server.await
 }
-
