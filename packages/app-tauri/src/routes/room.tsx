@@ -1,4 +1,5 @@
 import type { VideoCodec } from 'livekit-client'
+import VideoConference from '@/components/livekit/VideoConference'
 import { VideoConferenceClientImpl } from '@/components/VideoConferenceClientImpl'
 import { videoCodecs } from 'livekit-client'
 import { useSearchParams } from 'react-router'
@@ -27,8 +28,10 @@ export default function Room() {
   }
 
   return (
-    <main data-lk-theme="default" style={{ height: '100%' }}>
-      <VideoConferenceClientImpl liveKitUrl={liveKitUrl} token={token} codec={codec as VideoCodec} />
+    <main className="bg-slate-500" style={{ height: '100%' }}>
+      {/* <VideoConferenceClientImpl liveKitUrl={liveKitUrl} token={token} codec={codec as VideoCodec} />
+       */}
+      <VideoConference></VideoConference>
     </main>
   )
 }
