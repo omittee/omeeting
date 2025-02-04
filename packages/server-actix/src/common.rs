@@ -22,3 +22,9 @@ pub struct AppState {
   pub livekit_secret: String,
   pub livekit_key: String,
 }
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct BaseResponse {
+  pub ret: i32,
+  pub msg: String,
+}

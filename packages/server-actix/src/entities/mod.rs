@@ -2,4 +2,6 @@
 
 pub mod prelude;
 
+pub mod room;
+pub mod room_user;
 pub mod user;

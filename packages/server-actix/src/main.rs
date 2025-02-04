@@ -62,7 +62,7 @@ async fn main() -> std::io::Result<()> {
         |req, credentials: Option<BearerAuth>| async move {
           let path = req.path();
           debug!("path: {}", path);
-          if path == "/api/user/login" {
+          if path == "/api/user/login" || path == "/api/user/create" {
             return Ok(req);
           }
 

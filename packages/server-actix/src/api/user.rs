@@ -1,14 +1,42 @@
 use std::time::{self, Duration, UNIX_EPOCH};
 
 use crate::{common::AppState, entities::user, services::user::UserService};
-use actix_web::{delete, error, get, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope};
+use actix_web::{
+  delete, error, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope,
+};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use log::debug;
+use password_auth::{generate_hash, verify_password};
 
-use crate::common::{AuthClaims, AuthToken};
+use crate::common::{AuthClaims, AuthToken, BaseResponse};
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UserLoginRes {
+  #[serde(flatten)]
+  pub base: BaseResponse,
+  pub data: Option<AuthToken>,
+}
 
 #[post("/login")]
 async fn login(body: web::Json<user::Model>, data: web::Data<AppState>) -> Result<impl Responder> {
+  let Ok(user_model) = UserService::get_user(&data.db_conn, body.id.clone()).await else {
+    return Ok(web::Json(UserLoginRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "用户不存在".to_string(),
+      },
+      data: None,
+    }));
+  };
+  if !verify_password(body.password.clone(), &user_model.password).is_ok() {
+    return Ok(web::Json(UserLoginRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "用户密码错误".to_string(),
+      },
+      data: None,
+    }));
+  }
   let exp = time::SystemTime::now() + Duration::new(30 * 24 * 60 * 60, 0);
   let Ok(auth_token) = encode(
     &Header::default(),
@@ -23,24 +51,106 @@ async fn login(body: web::Json<user::Model>, data: web::Data<AppState>) -> Resul
   ) else {
     return Err(error::ErrorUnauthorized("Failed to encode token"));
   };
-  Ok(web::Json(AuthToken { auth_token }))
+  Ok(web::Json(UserLoginRes {
+    base: BaseResponse {
+      ret: 0,
+      msg: "用户登录成功".to_string(),
+    },
+    data: Some(AuthToken { auth_token }),
+  }))
 }
 
-// #[put("/create")]
-// async fn create_user(body: ) -> Result<impl Responder> {
-  
-// }
+#[put("/create")]
+async fn create_user(
+  body: web::Json<user::Model>,
+  data: web::Data<AppState>,
+) -> Result<impl Responder> {
+  UserService::create_user(
+    &data.db_conn,
+    user::Model {
+      id: body.id.clone(),
+      password: generate_hash(body.password.clone()),
+    },
+  )
+  .await
+  .map_or_else(
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "用户创建失败".to_string(),
+      }))
+    },
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: 0,
+        msg: "用户创建成功".to_string(),
+      }))
+    },
+  )
+}
 
 #[delete("/delete")]
 async fn delete_user(req: HttpRequest, data: web::Data<AppState>) -> Result<impl Responder> {
-  todo!("set the response type");
-  // if (UserService::delete_user(&data.db_conn, req.extensions().get::<AuthClaims>().unwrap().id.clone()).await).is_ok() {
-    
-  // } else {
-    
-  // }
+  UserService::delete_user(
+    &data.db_conn,
+    req.extensions().get::<AuthClaims>().unwrap().id.clone(),
+  )
+  .await
+  .map_or_else(
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "用户删除失败".to_string(),
+      }))
+    },
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: 0,
+        msg: "用户删除成功".to_string(),
+      }))
+    },
+  )
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct UserUpdateReq {
+  pub password: String,
+}
+
+#[post("/update")]
+async fn update_user(
+  body: web::Json<UserUpdateReq>,
+  req: HttpRequest,
+  data: web::Data<AppState>,
+) -> Result<impl Responder> {
+  UserService::change_password(
+    &data.db_conn,
+    user::Model {
+      id: req.extensions().get::<AuthClaims>().unwrap().id.clone(),
+      password: generate_hash(body.password.clone()),
+    },
+  )
+  .await
+  .map_or_else(
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "用户更新失败".to_string(),
+      }))
+    },
+    |_| {
+      Ok(web::Json(BaseResponse {
+        ret: 0,
+        msg: "用户更新成功".to_string(),
+      }))
+    },
+  )
 }
 
 pub fn get_user_scope() -> Scope {
-  web::scope("/api/user").service(delete_user).service(login)
+  web::scope("/api/user")
+    .service(create_user)
+    .service(delete_user)
+    .service(update_user)
+    .service(login)
 }
