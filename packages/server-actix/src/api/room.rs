@@ -2,8 +2,9 @@ use actix_web::{
   delete, error, get, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope,
 };
 use livekit_api::access_token;
-use sea_orm::sqlx::types::chrono;
+use sea_orm::sqlx::types::chrono::NaiveDateTime;
 use sea_orm::{ActiveValue, LoaderTrait};
+use ts_rs::TS;
 
 use crate::common::{AppState, AuthClaims, BaseResponse, LiveKitToken};
 
@@ -11,7 +12,8 @@ use crate::entities::{room, room_user};
 use crate::services::room::RoomService;
 use crate::services::room_user::RoomUserService;
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
 pub struct RoomTokenRes {
   #[serde(flatten)]
   pub base: BaseResponse,
@@ -75,10 +77,65 @@ async fn get_room_token(
   }))
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
+pub struct RoomNode {
+  pub id: i32,
+  pub code: String,
+  pub is_canceled: bool,
+  pub start_time: f64,
+  pub end_time: f64,
+  pub admin: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
+pub struct RoomListRes {
+  #[serde(flatten)]
+  base: BaseResponse,
+  data: Option<Vec<RoomNode>>,
+}
+
+#[get("/rooms/")]
+async fn get_rooms(
+  req: HttpRequest,
+  data: web::Data<AppState>,
+) -> Result<impl Responder> {
+  let user_id = req.extensions().get::<AuthClaims>().unwrap().id.clone();
+
+  let room_users = RoomUserService::get_rooms_by_user_id(&data.db_conn, user_id.clone())
+    .await
+    .unwrap();
+
+  let rooms: Vec<RoomNode>  = room_users
+    .load_one(room::Entity, &data.db_conn)
+    .await
+    .unwrap()
+    .into_iter()
+    .filter_map(|r| r.map(|x| RoomNode {
+      id: x.id,
+      code: x.code,
+      is_canceled: x.is_canceled,
+      start_time: x.start_time.timestamp() as f64,
+      end_time: x.end_time.timestamp() as f64,
+      admin: x.admin,
+    })).collect();
+
+  Ok(web::Json(RoomListRes {
+    base: BaseResponse {
+      ret: 0,
+      msg: "获取 room token 成功".to_string(),
+    },
+    data: Some(rooms),
+  }))
+}
+
+
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
 pub struct CreateRoomReq {
-  pub start_time: chrono::NaiveDateTime,
-  pub end_time: chrono::NaiveDateTime,
+  pub start_time: f64,
+  pub end_time: f64,
   pub users_ids: Vec<String>,
 }
 
@@ -104,8 +161,8 @@ async fn create_room(
     &data.db_conn,
     room::ActiveModel {
       code: ActiveValue::Set(code),
-      start_time: ActiveValue::Set(body.start_time),
-      end_time: ActiveValue::Set(body.end_time),
+      start_time: ActiveValue::Set(NaiveDateTime::from_timestamp(body.start_time as i64, 0)),
+      end_time: ActiveValue::Set(NaiveDateTime::from_timestamp(body.end_time as i64, 0)),
       admin: ActiveValue::Set(req.extensions().get::<AuthClaims>().unwrap().id.clone()),
       ..Default::default()
     },
@@ -180,10 +237,11 @@ async fn create_room(
 //     )
 // }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
 pub struct UpdateRoomReq {
-  start_time: Option<chrono::NaiveDateTime>,
-  end_time: Option<chrono::NaiveDateTime>,
+  start_time: Option<f64>,
+  end_time: Option<f64>,
   admin: Option<String>,
   is_canceled: Option<bool>,
   user_ids: Option<Vec<String>>,
@@ -217,8 +275,14 @@ async fn update_room(
   RoomService::update_room(
     &data.db_conn,
     room::Model {
-      start_time: body.start_time.unwrap_or(room.start_time),
-      end_time: body.end_time.unwrap_or(room.end_time),
+      start_time: body
+        .start_time
+        .map(|x| NaiveDateTime::from_timestamp(x as i64, 0))
+        .unwrap_or(room.start_time),
+      end_time: body
+        .end_time
+        .map(|x| NaiveDateTime::from_timestamp(x as i64, 0))
+        .unwrap_or(room.end_time),
       admin: body.admin.clone().unwrap_or(room.admin),
       is_canceled: body.is_canceled.clone().unwrap_or(room.is_canceled),
       ..room
@@ -242,5 +306,9 @@ async fn update_room(
 }
 
 pub fn get_room_scope() -> Scope {
-  web::scope("/api/room").service(get_room_token)
+  web::scope("/api/room")
+    .service(get_room_token)
+    .service(get_rooms)
+    .service(create_room)
+    .service(update_room)
 }

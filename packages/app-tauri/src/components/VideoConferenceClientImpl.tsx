@@ -6,50 +6,32 @@ import type {
   VideoCodec,
 } from 'livekit-client'
 import { SettingsMenu } from '@/components/SettingsMenu'
-import { formatChatMessageLinks, LiveKitRoom, VideoConference } from '@livekit/components-react'
+import { formatChatMessageLinks, LiveKitRoom } from '@livekit/components-react'
 import {
-  ExternalE2EEKeyProvider,
   Room,
   VideoPresets,
 } from 'livekit-client'
 import { useMemo } from 'react'
+import VideoConference from './livekit/VideoConference'
 
-export function VideoConferenceClientImpl(props: {
+export function VideoConferenceClientImpl({ liveKitUrl, token, codec }: {
   liveKitUrl: string
   token: string
   codec: VideoCodec | undefined
 }) {
-  const worker
-    = typeof window !== 'undefined'
-      && new Worker(new URL('livekit-client/e2ee-worker', import.meta.url))
-  const keyProvider = new ExternalE2EEKeyProvider()
-
-  const e2eePassphrase
-    = typeof window !== 'undefined' ? decodeURIComponent(window.location.hash.substring(1)) : undefined
-  const e2eeEnabled = !!(e2eePassphrase && worker)
   const roomOptions = useMemo((): RoomOptions => {
     return {
       publishDefaults: {
         videoSimulcastLayers: [VideoPresets.h540, VideoPresets.h216],
-        red: !e2eeEnabled,
-        videoCodec: props.codec,
+        videoCodec: codec,
       },
       adaptiveStream: { pixelDensity: 'screen' },
       dynacast: true,
-      e2ee: e2eeEnabled
-        ? {
-            keyProvider,
-            worker,
-          }
-        : undefined,
     }
   }, [])
 
   const room = useMemo(() => new Room(roomOptions), [])
-  if (e2eeEnabled) {
-    keyProvider.setKey(e2eePassphrase)
-    room.setE2EEEnabled(true)
-  }
+
   const connectOptions = useMemo((): RoomConnectOptions => {
     return {
       autoSubscribe: true,
@@ -58,10 +40,11 @@ export function VideoConferenceClientImpl(props: {
 
   return (
     <LiveKitRoom
+      className='h-full'
       room={room}
-      token={props.token}
+      token={token}
       connectOptions={connectOptions}
-      serverUrl={props.liveKitUrl}
+      serverUrl={liveKitUrl}
       audio
       video
     >

@@ -7,36 +7,43 @@ use actix_web::{
 use jsonwebtoken::{encode, EncodingKey, Header};
 use log::debug;
 use password_auth::{generate_hash, verify_password};
+use sea_orm::DatabaseConnection;
+use ts_rs::TS;
 
 use crate::common::{AuthClaims, AuthToken, BaseResponse};
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/user.ts")]
 pub struct UserLoginRes {
   #[serde(flatten)]
   pub base: BaseResponse,
   pub data: Option<AuthToken>,
 }
 
+async fn verify_user(id: String, password: String, db_conn: &DatabaseConnection) -> Result<(), BaseResponse> {
+  let Ok(user_model) = UserService::get_user(db_conn, id).await else {
+    return Err(BaseResponse {
+      ret: -1,
+      msg: "用户不存在".to_string(),
+    });
+  };
+  if !verify_password(password, &user_model.password).is_ok() {
+    return Err(BaseResponse {
+      ret: -1,
+      msg: "用户密码错误".to_string(),
+    });
+  }
+  Ok(())
+}
+
 #[post("/login")]
 async fn login(body: web::Json<user::Model>, data: web::Data<AppState>) -> Result<impl Responder> {
-  let Ok(user_model) = UserService::get_user(&data.db_conn, body.id.clone()).await else {
+  if let Err(e) = verify_user(body.id.clone(), body.password.clone(), &data.db_conn).await {
     return Ok(web::Json(UserLoginRes {
-      base: BaseResponse {
-        ret: -1,
-        msg: "用户不存在".to_string(),
-      },
+      base: e,
       data: None,
     }));
   };
-  if !verify_password(body.password.clone(), &user_model.password).is_ok() {
-    return Ok(web::Json(UserLoginRes {
-      base: BaseResponse {
-        ret: -1,
-        msg: "用户密码错误".to_string(),
-      },
-      data: None,
-    }));
-  }
   let exp = time::SystemTime::now() + Duration::new(30 * 24 * 60 * 60, 0);
   let Ok(auth_token) = encode(
     &Header::default(),
@@ -112,9 +119,11 @@ async fn delete_user(req: HttpRequest, data: web::Data<AppState>) -> Result<impl
   )
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/user.ts")]
 pub struct UserUpdateReq {
-  pub password: String,
+  pub old_password: String,
+  pub new_password: String,
 }
 
 #[post("/update")]
@@ -123,11 +132,15 @@ async fn update_user(
   req: HttpRequest,
   data: web::Data<AppState>,
 ) -> Result<impl Responder> {
+  let user_id = req.extensions().get::<AuthClaims>().unwrap().id.clone();
+  if let Err(e) = verify_user(user_id.clone(), body.old_password.clone(), &data.db_conn).await {
+    return Ok(web::Json(e));
+  };
   UserService::change_password(
     &data.db_conn,
     user::Model {
-      id: req.extensions().get::<AuthClaims>().unwrap().id.clone(),
-      password: generate_hash(body.password.clone()),
+      id: user_id,
+      password: generate_hash(body.new_password.clone()),
     },
   )
   .await

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { Send } from 'lucide-react'
 import { useState } from 'react'
 import { ScrollArea } from '../ui/scroll-area'
+import { useChat } from '@livekit/components-react'
 
 export default function Chat() {
   const [messages, setMessages] = useState([
@@ -32,23 +33,24 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const inputLength = input.trim().length
 
+  const { send, chatMessages, isSending } = useChat();
   return (
     <>
       <Card>
         <CardContent className="pt-4">
           <ScrollArea className="h-72">
             <div className="space-y-4">
-              {messages.map((message, index) => (
+              {chatMessages.map((message, index) => (
                 <div
                   key={index}
                   className={cn(
                     'flex w-max max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm',
-                    message.role === 'user'
+                    message.from?.identity === 'user'
                       ? 'ml-auto bg-primary text-primary-foreground'
                       : 'bg-muted',
                   )}
                 >
-                  {message.content}
+                  {message.message}
                 </div>
               ))}
             </div>
@@ -57,17 +59,11 @@ export default function Chat() {
         </CardContent>
         <CardFooter>
           <form
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault()
               if (inputLength === 0)
                 return
-              setMessages([
-                ...messages,
-                {
-                  role: 'user',
-                  content: input,
-                },
-              ])
+              await send(input);
               setInput('')
             }}
             className="flex w-full items-center space-x-2"
@@ -82,7 +78,7 @@ export default function Chat() {
             />
             <Button type="submit" size="icon" disabled={inputLength === 0}>
               <Send />
-              <span className="sr-only">Send</span>
+              <span className="sr-only">发送</span>
             </Button>
           </form>
         </CardFooter>

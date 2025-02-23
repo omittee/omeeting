@@ -9,6 +9,7 @@ import {
   ScrollRestoration,
 } from 'react-router'
 import stylesheet from './index.css?url'
+import '@livekit/components-styles'
 
 export const links: Route.LinksFunction = () => [
   { rel: 'stylesheet', href: stylesheet },
