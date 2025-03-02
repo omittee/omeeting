@@ -27,7 +27,7 @@ export default function MainRoom() {
   }
 
   return (
-    <main className="bg-slate-500" style={{ height: '100%' }}>
+    <main className="bg-slate-200" style={{ height: '100%' }}>
       <VideoConferenceClientImpl liveKitUrl={liveKitUrl} token={token} codec={codec as VideoCodec} />
     </main>
   )

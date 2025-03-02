@@ -15,20 +15,6 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use sea_orm::Database;
 use std::env;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-  HttpResponse::Ok().body("Hello world!")
-}
-
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-  HttpResponse::Ok().body(req_body)
-}
-
-async fn manual_hello() -> impl Responder {
-  HttpResponse::Ok().body("Hey there!")
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
   env_logger::init();
@@ -56,13 +42,17 @@ async fn main() -> std::io::Result<()> {
   let server_url = env::var("SERVER_URL").expect("SERVER_URL must be set in .env file");
   let server = HttpServer::new(move || {
     App::new()
+      .wrap(middleware::NormalizePath::trim())
       .app_data(web::Data::new(state.clone()))
       .wrap(middleware::Logger::default())
       .wrap(HttpAuthentication::with_fn(
         |req, credentials: Option<BearerAuth>| async move {
           let path = req.path();
-          debug!("path: {}", path);
-          if path == "/api/user/login" || path == "/api/user/create" {
+
+          if ["/api/user/login", "/api/user/create"]
+            .iter()
+            .any(|p| path.starts_with(p))
+          {
             return Ok(req);
           }
 
@@ -92,9 +82,6 @@ async fn main() -> std::io::Result<()> {
       ))
       .service(get_user_scope())
       .service(get_room_scope())
-      .service(hello)
-      .service(echo)
-      .route("/hey", web::get().to(manual_hello))
   })
   .bind_openssl(server_url.as_str(), ssl_builder)?
   .workers(1)

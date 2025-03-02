@@ -36,7 +36,10 @@ export default defineConfig(async () => ({
       ignored: ['**/src-tauri/**'],
     },
     proxy: {
-      '/api': 'https://localhost:8081',
+      '/api': {
+        target: 'https://localhost:8081',
+        secure: false,
+      }
     }
   },
 }))

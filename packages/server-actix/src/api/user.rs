@@ -8,6 +8,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::debug;
 use password_auth::{generate_hash, verify_password};
 use sea_orm::DatabaseConnection;
+use serde::de;
 use ts_rs::TS;
 
 use crate::common::{AuthClaims, AuthToken, BaseResponse};
@@ -72,6 +73,12 @@ async fn create_user(
   body: web::Json<user::Model>,
   data: web::Data<AppState>,
 ) -> Result<impl Responder> {
+  if UserService::get_user(&data.db_conn, body.id.clone()).await.is_ok() {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "用户已存在，创建失败".to_string(),
+    }))
+  }
   UserService::create_user(
     &data.db_conn,
     user::Model {

@@ -4,10 +4,16 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
+  Navigate,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
+  useNavigate,
+  useRoutes,
 } from 'react-router'
+import { Toaster } from 'sonner'
+import { authToken, userId } from './constants'
 import stylesheet from './index.css?url'
 import '@livekit/components-styles'
 
@@ -34,10 +40,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const location = useLocation()
+  if (!sessionStorage.getItem(authToken) && location.pathname !== '/auth') {
+    return <Navigate to="/auth" replace />
+  }
   return (
     <div className="w-dvw h-dvh bg-muted/50">
       {' '}
       <Outlet />
+      <Toaster></Toaster>
     </div>
   )
 }
