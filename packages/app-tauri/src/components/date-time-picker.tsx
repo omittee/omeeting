@@ -1,43 +1,30 @@
-import type { ChangeEventHandler } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { format, setHours, setMinutes, setSeconds } from 'date-fns'
+import { format, getHours, getMinutes, setHours, setMinutes, setSeconds } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import { useState } from 'react'
+import { TimePicker } from './time-picker'
 import { Button } from './ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 
 export function DateTimePicker({
   dateTime,
   onDateTimeChange,
+  className,
 }: {
   dateTime: Date
   onDateTimeChange: (date: Date) => void
+  className?: string
 }) {
-  dateTime.setSeconds(0);
-  const [timeValue, setTimeValue] = useState<string>(
-    format(dateTime, 'HH:mm:00')
-  )
-
-  const handleTimeChange: ChangeEventHandler<HTMLInputElement> = (e) => {
-    const time = e.target.value
-
-    const [hours, minutes] = time.split(':').map(str => Number.parseInt(str, 10))
-    const newSelectedDate = setHours(setMinutes(setSeconds(dateTime, 0), minutes), hours)
-    setTimeValue(time)
-    onDateTimeChange(newSelectedDate)
-  }
+  dateTime.setSeconds(0)
+  const [timeValue, setTimeValue] = useState<[number, number]>([getHours(dateTime), getMinutes(dateTime)])
 
   const handleDaySelect = (date: Date | undefined) => {
     if (!timeValue || !date) {
       return
     }
     const [hours, minutes] = timeValue
-      .split(':')
-      .map(str => Number.parseInt(str, 10))
     const newDate = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -49,13 +36,13 @@ export function DateTimePicker({
   }
 
   return (
-    <div>
+    <div className={className}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              'w-[280px] justify-start text-left font-normal',
+              'w-full justify-start text-left font-normal',
               !dateTime && 'text-muted-foreground',
             )}
           >
@@ -64,12 +51,18 @@ export function DateTimePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
-          <form>
-            <Label className='flex gap-2 justify-center items-center my-2'>
-              <span>设置时间:</span>
-              <Input className='w-min' type="time" value={timeValue} onChange={handleTimeChange} />
-            </Label>
-          </form>
+          <TimePicker
+            time={timeValue}
+            labelName='设置时间:'
+            className='w-full justify-center p-2'
+            onTimeChange={(time) => {
+              setTimeValue(time)
+              const [hours, minutes] = time
+              const newSelectedDate = setHours(setMinutes(setSeconds(dateTime, 0), minutes), hours)
+              handleDaySelect(newSelectedDate)
+            }}
+          >
+          </TimePicker>
           <Calendar
             mode="single"
             selected={dateTime}
