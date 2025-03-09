@@ -1,8 +1,10 @@
 use std::fmt::format;
 
 use crate::entities::room;
+use log::debug;
 use sea_orm::{
-  prelude::DateTime, sqlx::types::chrono, ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, InsertResult, QueryFilter
+  prelude::DateTime, sqlx::types::chrono, ActiveModelTrait, ActiveValue, ColumnTrait, Condition,
+  DatabaseConnection, DbErr, EntityTrait, InsertResult, QueryFilter,
 };
 
 use rand::random_range;
@@ -17,7 +19,7 @@ impl RoomService {
       if room::Entity::find()
         .filter(
           Condition::all()
-            .add(room::Column::Code.eq(res))
+            .add(room::Column::Code.eq(format!("{:09}", res)))
             .add(room::Column::EndTime.lt(time)),
         )
         .all(dbconn)
@@ -41,8 +43,8 @@ impl RoomService {
       .await?
       .ok_or(DbErr::RecordNotFound(format!("room not found: {id}")))
   }
-  pub async fn update_room(dbconn: &DatabaseConnection, room: room::Model) -> Result<(), DbErr> {
-    room::ActiveModel::from(room)
+  pub async fn update_room(dbconn: &DatabaseConnection, room: room::ActiveModel) -> Result<(), DbErr> {
+    room
       .update(dbconn)
       .await
       .and(Ok(()))

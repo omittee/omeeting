@@ -20,6 +20,6 @@ export const deleteUser = createRequest<void, BaseResponse>({
 })
 
 export const updatePassword = createRequest<UserUpdateReq, BaseResponse>({
-  url: '/api/user/updatePassword',
+  url: '/api/user/update',
   method: 'POST',
 })

@@ -1,5 +1,8 @@
 use crate::entities::user;
-use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, DbErr, EntityTrait};
+use sea_orm::{
+  ActiveModelTrait, ActiveValue, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait,
+  QueryFilter,
+};
 
 pub struct UserService;
 
@@ -16,6 +19,15 @@ impl UserService {
       .await?
       .ok_or(DbErr::RecordNotFound(id))
   }
+  pub async fn get_users(
+    dbconn: &DatabaseConnection,
+    ids: &Vec<String>,
+  ) -> Result<Vec<user::Model>, DbErr> {
+    user::Entity::find()
+      .filter(user::Column::Id.is_in(ids))
+      .all(dbconn)
+      .await
+  }
   pub async fn delete_user(dbconn: &DatabaseConnection, id: String) -> Result<(), DbErr> {
     user::ActiveModel {
       id: ActiveValue::Set(id),
@@ -27,11 +39,8 @@ impl UserService {
   }
   pub async fn change_password(
     dbconn: &DatabaseConnection,
-    user: user::Model,
+    user: user::ActiveModel,
   ) -> Result<(), DbErr> {
-    user::ActiveModel::from(user)
-      .update(dbconn)
-      .await
-      .and(Ok(()))
+    user.update(dbconn).await.and(Ok(()))
   }
 }

@@ -12,12 +12,12 @@ export const updateRoom = createRequest<UpdateRoomReq, BaseResponse>({
   method: 'POST',
 })
 
-export const getRoomToken = createRequest<undefined, RoomTokenRes>({
+export const getRoomToken = createRequest<void, RoomTokenRes>({
   url: '/api/room/roomToken',
   method: 'GET',
 })
 
-export const getRooms = createRequest<undefined, RoomListRes>({
-  url: '/api/rooms',
+export const getRooms = createRequest<void, RoomListRes>({
+  url: '/api/room/rooms',
   method: 'GET',
 })

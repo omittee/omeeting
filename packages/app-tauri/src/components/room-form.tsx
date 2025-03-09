@@ -1,7 +1,7 @@
 import type { CreateRoomReq } from '@/types/room'
 
 import type { ComponentProps } from 'react'
-import { createRoom } from '@/api/room'
+import { createRoom, updateRoom } from '@/api/room'
 import { createUser, login } from '@/api/user'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,16 +26,69 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 export function RoomForm({
   className,
   isCreating,
+  data,
+  close,
+  onFinished
 }: ComponentProps<'div'> & {
   isCreating: boolean
+  data?: {
+    id: number
+    start_time: number
+    end_time: number
+    users_ids: string[]
+    admin: string
+  }
+  close?: () => void,
+  onFinished?: () => void
 }) {
-  const [roomData, setRoomData] = useState({
-    start_time: new Date(),
-    end_time: [1, 0] as [number, number],
-    users_ids: '',
-  })
+  const name = sessionStorage.getItem(userId) ?? ''
+  const diffMin = data ? (data.end_time - data.start_time) / 60 : 60
+  const defaultData = {
+    start_time: data?.start_time ? new Date(data.start_time * 1000) : new Date(),
+    end_time: [diffMin / 60, diffMin % 60] as [number, number],
+    users_ids: (data?.users_ids ?? []).join(' '),
+    admin: data?.admin,
+  }
+  const [roomData, setRoomData] = useState({ ...defaultData })
   const handleCreateRoom = async () => {
-    // createRoom()
+    const start_time = Math.floor(roomData.start_time.getTime() / 1000)
+    const [h, m] = roomData.end_time
+    await createRoom({
+      start_time,
+      end_time: start_time + (h * 60 + m) * 60,
+      users_ids: [...new Set(roomData.users_ids.trim().split(/\s+/).concat(name))],
+    })
+    toast.success('会议创建成功', { position: 'top-center' })
+    onFinished?.()
+    if (close) {
+      close()
+    }
+    else {
+      setRoomData({
+        ...defaultData
+      })
+    }
+  }
+  const handleUpdateRoom = async () => {
+    const start_time = Math.floor(roomData.start_time.getTime() / 1000)
+    const [h, m] = roomData.end_time
+    await updateRoom({
+      start_time,
+      end_time: start_time + (h * 60 + m) * 60,
+      user_ids: [...new Set(roomData.users_ids.trim().split(/\s+/).concat(name))],
+      admin: roomData.admin ?? null,
+      is_canceled: null
+    }, data?.id.toString())
+    toast.success('会议更新成功', { position: 'top-center' })
+    onFinished?.()
+    if (close) {
+      close()
+    }
+    else {
+      setRoomData({
+        ...defaultData
+      })
+    }
   }
   return (
     <div className={className}>
@@ -102,10 +155,13 @@ export function RoomForm({
                       </TooltipProvider>
                     </Label>
                   </div>
-                  <Input id="users" value={roomData.users_ids} required onChange={e => setRoomData({ ...roomData, users_ids: e.target.value })} />
+                  <Input id="users" value={roomData.admin} required onChange={e => setRoomData({ ...roomData, admin: e.target.value })} />
                 </div>
               )}
-              <Button className="w-full" disabled={roomData.users_ids === ''}>
+              <Button className="w-full" disabled={roomData.users_ids === ''} onClick={(e) => {
+                e.preventDefault();
+                isCreating ? handleCreateRoom() : handleUpdateRoom()
+              }}>
                 { isCreating ? '创建会议' : '更新' }
               </Button>
             </div>

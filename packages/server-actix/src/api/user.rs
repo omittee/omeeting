@@ -7,7 +7,7 @@ use actix_web::{
 use jsonwebtoken::{encode, EncodingKey, Header};
 use log::debug;
 use password_auth::{generate_hash, verify_password};
-use sea_orm::DatabaseConnection;
+use sea_orm::{ActiveValue, DatabaseConnection};
 use serde::de;
 use ts_rs::TS;
 
@@ -145,9 +145,9 @@ async fn update_user(
   };
   UserService::change_password(
     &data.db_conn,
-    user::Model {
-      id: user_id,
-      password: generate_hash(body.new_password.clone()),
+    user::ActiveModel {
+      id: ActiveValue::Set(user_id),
+      password: ActiveValue::Set(generate_hash(body.new_password.clone())),
     },
   )
   .await

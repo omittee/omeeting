@@ -2,6 +2,7 @@ use actix_web::{
   delete, error, get, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope,
 };
 use livekit_api::access_token;
+use log::debug;
 use sea_orm::sqlx::types::chrono::NaiveDateTime;
 use sea_orm::{ActiveValue, LoaderTrait};
 use ts_rs::TS;
@@ -11,6 +12,7 @@ use crate::common::{AppState, AuthClaims, BaseResponse, LiveKitToken};
 use crate::entities::{room, room_user};
 use crate::services::room::RoomService;
 use crate::services::room_user::RoomUserService;
+use crate::services::user::UserService;
 
 #[derive(serde::Deserialize, serde::Serialize, TS)]
 #[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
@@ -50,6 +52,16 @@ async fn get_room_token(
     }));
   };
 
+  if room.is_canceled {
+    return Ok(web::Json(RoomTokenRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "会议已取消".to_string(),
+      },
+      data: None,
+    }));
+  }
+
   let Ok(livekit_token) =
     access_token::AccessToken::with_api_key(&data.livekit_key, &data.livekit_secret)
       .with_identity(user_id.as_str())
@@ -86,6 +98,7 @@ pub struct RoomNode {
   pub start_time: f64,
   pub end_time: f64,
   pub admin: String,
+  pub users_ids: Vec<String>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, TS)]
@@ -96,30 +109,36 @@ pub struct RoomListRes {
   data: Option<Vec<RoomNode>>,
 }
 
-#[get("/rooms/")]
-async fn get_rooms(
-  req: HttpRequest,
-  data: web::Data<AppState>,
-) -> Result<impl Responder> {
+#[get("/rooms")]
+async fn get_rooms(req: HttpRequest, data: web::Data<AppState>) -> Result<impl Responder> {
   let user_id = req.extensions().get::<AuthClaims>().unwrap().id.clone();
 
   let room_users = RoomUserService::get_rooms_by_user_id(&data.db_conn, user_id.clone())
     .await
     .unwrap();
 
-  let rooms: Vec<RoomNode>  = room_users
+  let mut rooms = vec![];
+  for r in room_users
     .load_one(room::Entity, &data.db_conn)
     .await
     .unwrap()
-    .into_iter()
-    .filter_map(|r| r.map(|x| RoomNode {
+  {
+    let Some(x) = r else {
+      continue;
+    };
+    let Ok(t) = RoomUserService::get_users_by_room_id(&data.db_conn, x.id).await else {
+      continue;
+    };
+    rooms.push(RoomNode {
       id: x.id,
       code: x.code,
       is_canceled: x.is_canceled,
       start_time: x.start_time.timestamp() as f64,
       end_time: x.end_time.timestamp() as f64,
       admin: x.admin,
-    })).collect();
+      users_ids: t.into_iter().map(|x| x.user_id).collect(),
+    });
+  }
 
   Ok(web::Json(RoomListRes {
     base: BaseResponse {
@@ -129,7 +148,6 @@ async fn get_rooms(
     data: Some(rooms),
   }))
 }
-
 
 #[derive(serde::Deserialize, serde::Serialize, TS)]
 #[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
@@ -145,10 +163,27 @@ async fn create_room(
   body: web::Json<CreateRoomReq>,
   data: web::Data<AppState>,
 ) -> Result<impl Responder> {
-  if body.users_ids.is_empty() {
+  if body.users_ids.len() < 2 {
     return Ok(web::Json(BaseResponse {
       ret: -1,
-      msg: "会议创建失败, 用户列表为空".to_string(),
+      msg: "会议创建失败, 与会人数不足".to_string(),
+    }));
+  }
+  let Ok(users) = UserService::get_users(&data.db_conn, &body.users_ids).await else {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "会议创建失败".to_string(),
+    }));
+  };
+  let not_exists_users = body
+    .users_ids
+    .iter()
+    .filter(|&id| users.iter().find(|u| u.id == *id).is_none())
+    .collect::<Vec<_>>();
+  if !not_exists_users.is_empty() {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: format!("会议创建失败, 用户 {:?} 不存在", not_exists_users),
     }));
   }
   let Ok(code) = RoomService::get_no_dup_code(&data.db_conn).await else {
@@ -169,7 +204,6 @@ async fn create_room(
   )
   .await
   .unwrap();
-
   RoomUserService::create_room_user(
     &data.db_conn,
     body
@@ -184,7 +218,8 @@ async fn create_room(
   )
   .await
   .map_or_else(
-    |_| {
+    |x| {
+      debug!("create_room_user err: {:?}", x);
       Ok(web::Json(BaseResponse {
         ret: -1,
         msg: "会议创建失败".to_string(),
@@ -269,37 +304,73 @@ async fn update_room(
   }
 
   if let Some(user_ids) = &body.user_ids {
-    let _ = RoomUserService::update_room_user(&data.db_conn, room_id, user_ids).await;
+    if user_ids.len() < 2 {
+      return Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "会议更新失败, 与会人数不足".to_string(),
+      }));
+    }
+    let Ok(users) = UserService::get_users(&data.db_conn, user_ids).await else {
+      return Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "会议更新失败，获取用户异常".to_string(),
+      }));
+    };
+    let not_exists_users = user_ids
+      .iter()
+      .filter(|&id| users.iter().find(|u| u.id == *id).is_none())
+      .collect::<Vec<_>>();
+    if !not_exists_users.is_empty() {
+      return Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: format!("会议更新失败, 用户 {:?} 不存在", not_exists_users),
+      }));
+    }
+    if let Err(e) = RoomUserService::update_room_user(&data.db_conn, room_id, user_ids).await {
+      return Ok(web::Json(BaseResponse {
+        ret: -1,
+        msg: "会议更新失败，更新与会人员异常".to_string(),
+      }));
+    };
   }
 
   RoomService::update_room(
     &data.db_conn,
-    room::Model {
+    room::ActiveModel {
+      id: ActiveValue::Set(room.id),
       start_time: body
         .start_time
-        .map(|x| NaiveDateTime::from_timestamp(x as i64, 0))
-        .unwrap_or(room.start_time),
+        .map(|x| ActiveValue::Set(NaiveDateTime::from_timestamp(x as i64, 0)))
+        .unwrap_or(ActiveValue::NotSet),
       end_time: body
         .end_time
-        .map(|x| NaiveDateTime::from_timestamp(x as i64, 0))
-        .unwrap_or(room.end_time),
-      admin: body.admin.clone().unwrap_or(room.admin),
-      is_canceled: body.is_canceled.clone().unwrap_or(room.is_canceled),
-      ..room
+        .map(|x| ActiveValue::Set(NaiveDateTime::from_timestamp(x as i64, 0)))
+        .unwrap_or(ActiveValue::NotSet),
+      admin: body
+        .admin
+        .clone()
+        .map(|x| ActiveValue::Set(x))
+        .unwrap_or(ActiveValue::NotSet),
+      is_canceled: body
+        .is_canceled
+        .map(|x| ActiveValue::Set(x))
+        .unwrap_or(ActiveValue::NotSet),
+      ..Default::default()
     },
   )
   .await
   .map_or_else(
     |_| {
+      debug!("ccc");
       Ok(web::Json(BaseResponse {
         ret: -1,
-        msg: "用户更新失败".to_string(),
+        msg: "会议更新失败".to_string(),
       }))
     },
     |_| {
       Ok(web::Json(BaseResponse {
         ret: 0,
-        msg: "用户更新成功".to_string(),
+        msg: "会议更新成功".to_string(),
       }))
     },
   )

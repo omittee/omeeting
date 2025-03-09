@@ -1,4 +1,5 @@
 use crate::entities::room_user;
+use log::debug;
 use sea_orm::{
   ActiveValue, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait,
   QueryFilter,
@@ -11,6 +12,9 @@ impl RoomUserService {
     dbconn: &DatabaseConnection,
     room_users: Vec<room_user::ActiveModel>,
   ) -> Result<(), DbErr> {
+    if room_users.is_empty() {
+      return Ok(())
+    }
     room_user::Entity::insert_many(room_users)
       .exec(dbconn)
       .await
