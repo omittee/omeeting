@@ -22,3 +22,4 @@ livekit-api = { version = "0.4.1", features = ["signal-client-async"]}
 password-auth = "1.0.0"
 rand = "0.9.0"
 ts-rs = "10.1.0"
+actix-cors = "0.7.1"

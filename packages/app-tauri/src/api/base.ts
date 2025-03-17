@@ -2,6 +2,8 @@ import type { BaseResponse } from '@/types/base'
 import { authToken } from '@/constants'
 import { toast } from 'sonner'
 
+const base = `${import.meta.env.VITE_ServerUrl}`
+
 export function createRequest<Req, Ret extends BaseResponse>({
   url,
   method,
@@ -22,7 +24,7 @@ export function createRequest<Req, Ret extends BaseResponse>({
       headers = { ...(headers ?? {}), Authorization: `Bearer ${token}` }
     }
     try {
-      const res = await fetch(`${url}/${path ?? ''}`, {
+      const res = await fetch(`${base}${url}/${path ?? ''}`, {
         method,
         body: JSON.stringify(data),
         headers: {

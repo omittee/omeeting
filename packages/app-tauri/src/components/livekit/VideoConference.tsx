@@ -3,17 +3,19 @@ import type {
   WidgetState,
 } from '@livekit/components-core'
 import type { MessageFormatter } from '@livekit/components-react'
-import { isEqualTrackRef, isTrackReference, log } from '@livekit/components-core'
-import { LayoutContextProvider, ParticipantTile, useCreateLayoutContext, usePinnedTracks, useTracks } from '@livekit/components-react'
+import { isEqualTrackRef, isTrackReference, log, supportsScreenSharing } from '@livekit/components-core'
+import { LayoutContextProvider, useCreateLayoutContext, useDisconnectButton, usePersistentUserChoices, usePinnedTracks, useTracks } from '@livekit/components-react'
 import { RoomEvent, Track } from 'livekit-client'
-import { MessageCircleIcon, MicIcon, MicOffIcon, PhoneIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { MicIcon, MicOffIcon, PhoneIcon, ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { useNavigate } from 'react-router'
 import { Button } from '../ui/button'
 import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel'
-import { Drawer, DrawerContent, DrawerTrigger } from '../ui/drawer'
 import Chat from './Chat'
+import { ParticipantTile } from './ParticipantTile'
 import { Tracks } from './Tracks'
+import { TrackToggle } from './TrackToggle'
 
 export interface VideoConferenceProps extends React.HTMLAttributes<HTMLDivElement> {
   chatMessageFormatter?: MessageFormatter
@@ -95,8 +97,42 @@ export default function VideoConference({
     tracks,
   ])
 
-  const [videoOn, setVideoOn] = useState(false)
-  const [micOn, setMicOn] = useState(false)
+  const {
+    userChoices,
+    saveAudioInputEnabled,
+    saveVideoInputEnabled,
+  } = usePersistentUserChoices({ defaults: { videoEnabled: false, audioEnabled: false } })
+
+  const microphoneOnChange = useCallback(
+    (enabled: boolean, isUserInitiated: boolean) =>
+      isUserInitiated ? saveAudioInputEnabled(enabled) : null,
+    [saveAudioInputEnabled],
+  )
+
+  const cameraOnChange = useCallback(
+    (enabled: boolean, isUserInitiated: boolean) =>
+      isUserInitiated ? saveVideoInputEnabled(enabled) : null,
+    [saveVideoInputEnabled],
+  )
+
+  const navigate = useNavigate()
+
+  const { buttonProps: { onClick: disConnectBtnClick } } = useDisconnectButton({})
+  const handleDisconnect = useCallback(((...args) => {
+    disConnectBtnClick(...args)
+    navigate('/')
+  }) as React.MouseEventHandler<HTMLButtonElement>, [disConnectBtnClick, navigate])
+
+  const browserSupportsScreenSharing = supportsScreenSharing()
+
+  const [isScreenShareEnabled, setIsScreenShareEnabled] = useState(false)
+
+  const onScreenShareChange = useCallback(
+    (enabled: boolean) => {
+      setIsScreenShareEnabled(enabled)
+    },
+    [setIsScreenShareEnabled],
+  )
 
   return (
     <LayoutContextProvider
@@ -106,34 +142,49 @@ export default function VideoConference({
     >
       <div className="w-full h-full flex flex-col justify-center items-center">
         <div className="flex justify-center items-center flex-1 w-full h-full">
-          <Carousel className="w-7/8 ">
-            <CarouselContent>
-              <Tracks tracks={carouselTracks}>
-                <CarouselItem>
-                  <ParticipantTile />
-                </CarouselItem>
-              </Tracks>
-            </CarouselContent>
-          </Carousel>
+          <div className="flex flex-col justify-center w-full h-full gap-3">
+            {focusTrack && <ParticipantTile trackRef={focusTrack} />}
+            <Carousel className="w-7/8 ">
+              <CarouselContent>
+                <Tracks tracks={carouselTracks}>
+                  <CarouselItem>
+                    <ParticipantTile className='h-full'/>
+                  </CarouselItem>
+                </Tracks>
+              </CarouselContent>
+            </Carousel>
+          </div>
 
         </div>
         <div className="flex gap-3 py-4">
-          <Button size="icon" className="rounded-full w-16 h-16" onClick={() => setVideoOn(!videoOn)}>
-            { videoOn ? <VideoIcon className="!w-8 !h-8" /> : <VideoOffIcon className="!w-8 !h-8" />}
-          </Button>
-          <Button size="icon" className="rounded-full w-16 h-16" onClick={() => setMicOn(!micOn)}>
-            { micOn ? <MicIcon className="!w-8 !h-8" /> : <MicOffIcon className="!w-8 !h-8" />}
-          </Button>
-          <Button variant="destructive" size="icon" className="rounded-full w-16 h-16"><PhoneIcon className="!w-8 !h-8" /></Button>
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button size="icon" className="rounded-full w-16 h-16"><MessageCircleIcon className="!w-8 !h-8" /></Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <Chat></Chat>
-            </DrawerContent>
-          </Drawer>
+          <TrackToggle
+            source={Track.Source.Microphone}
+            onChange={microphoneOnChange}
+          >
+            { userChoices.audioEnabled ? <MicIcon className="!w-8 !h-8" /> : <MicOffIcon className="!w-8 !h-8" />}
+          </TrackToggle>
 
+          <TrackToggle
+            source={Track.Source.Camera}
+            onChange={cameraOnChange}
+          >
+            { userChoices.videoEnabled ? <VideoIcon className="!w-8 !h-8" /> : <VideoOffIcon className="!w-8 !h-8" />}
+          </TrackToggle>
+          {
+            browserSupportsScreenSharing && (
+              <TrackToggle
+                source={Track.Source.ScreenShare}
+                captureOptions={{ audio: true, selfBrowserSurface: 'include' }}
+                onChange={onScreenShareChange}
+              >
+                {(isScreenShareEnabled ? <ScreenShareOffIcon className="!w-8 !h-8" /> : <ScreenShareIcon className="!w-8 !h-8" />)}
+              </TrackToggle>
+            )
+          }
+          <Chat></Chat>
+          <Button variant="destructive" size="icon" className="rounded-full w-14 h-14" onClick={handleDisconnect}>
+            <PhoneIcon className="!w-8 !h-8" />
+          </Button>
         </div>
       </div>
 

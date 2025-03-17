@@ -72,7 +72,7 @@ export function RoomInfos({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Trash2Icon className="text-red-500" onClick={() => handleCancel(id.toString())} />
+                        <Trash2Icon className="text-red-500" onClick={() => is_canceled || handleCancel(id.toString())} />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>取消会议</p>
@@ -95,6 +95,7 @@ export function RoomInfos({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <EditIcon onClick={async () => {
+                          if (is_canceled) return
                           setCurData({ id, start_time, end_time, users_ids, admin });
                           setIsDialogOpen(true)
                         }}

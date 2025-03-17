@@ -2,8 +2,14 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
+    {
+      "identifier": "core:default",
+      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+    },
     "core:default",
     "opener:default"
   ]

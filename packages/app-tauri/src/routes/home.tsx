@@ -38,10 +38,10 @@ export default function Home() {
     <div className="p-8 h-full bg-slate-100 flex flex-col">
       <div className='text-4xl font-extrabold pb-4 italic'>Omeeting</div>
       <User />
-      <div className="flex gap-4 w-full pt-10">
+      <div className="flex w-full pt-10">
         <Dialog>
           <DialogTrigger asChild>
-            <Button>加入会议</Button>
+            <Button className='mr-4'>加入会议</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogTitle>请输入会议号</DialogTitle>

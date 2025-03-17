@@ -3,6 +3,7 @@ mod common;
 mod entities;
 mod services;
 
+use actix_cors::Cors;
 use actix_web::{
   error, get, middleware, post, web, App, HttpMessage, HttpResponse, HttpServer, Responder,
 };
@@ -42,11 +43,16 @@ async fn main() -> std::io::Result<()> {
   let server_url = env::var("SERVER_URL").expect("SERVER_URL must be set in .env file");
   let server = HttpServer::new(move || {
     App::new()
+      .wrap(Cors::permissive())
       .wrap(middleware::NormalizePath::trim())
       .app_data(web::Data::new(state.clone()))
       .wrap(middleware::Logger::default())
       .wrap(HttpAuthentication::with_fn(
         |req, credentials: Option<BearerAuth>| async move {
+          let method = req.method();
+          if method == "OPTIONS" {
+            return Ok(req);
+          }
           let path = req.path();
 
           if ["/api/user/login", "/api/user/create"]

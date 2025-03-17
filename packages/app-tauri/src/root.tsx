@@ -45,7 +45,7 @@ export default function App() {
     return <Navigate to="/auth" replace />
   }
   return (
-    <div className="w-dvw h-dvh bg-muted/50">
+    <div className="w-screen h-screen bg-muted/50">
       {' '}
       <Outlet />
       <Toaster></Toaster>

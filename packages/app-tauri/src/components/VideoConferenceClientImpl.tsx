@@ -45,8 +45,8 @@ export function VideoConferenceClientImpl({ liveKitUrl, token, codec }: {
       token={token}
       connectOptions={connectOptions}
       serverUrl={liveKitUrl}
-      audio
-      video
+      audio={false}
+      video={false}
     >
       <VideoConference
         chatMessageFormatter={formatChatMessageLinks}
