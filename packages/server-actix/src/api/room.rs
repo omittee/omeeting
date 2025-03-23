@@ -2,17 +2,143 @@ use actix_web::{
   delete, error, get, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope,
 };
 use livekit_api::access_token;
+use livekit_api::services::egress::encoding::{EncodingOptions, H264_1080P_30};
+use livekit_api::services::egress::{EgressClient, EgressOutput, RoomCompositeOptions};
+use livekit_protocol::encoded_file_output::Output;
+use livekit_protocol::{EncodedFileOutput, S3Upload};
 use log::debug;
 use sea_orm::sqlx::types::chrono::NaiveDateTime;
 use sea_orm::{ActiveValue, LoaderTrait};
 use ts_rs::TS;
 
-use crate::common::{AppState, AuthClaims, BaseResponse, LiveKitToken};
+use crate::common::{AppState, AuthClaims, BaseResponse, LiveKitEgressInfo, LiveKitToken};
 
 use crate::entities::{room, room_user};
 use crate::services::room::RoomService;
 use crate::services::room_user::RoomUserService;
 use crate::services::user::UserService;
+
+#[derive(serde::Deserialize, serde::Serialize, TS)]
+#[ts(export, export_to = "../../app-tauri/src/types/room.ts")]
+pub struct LiveKitEgressInfoRes {
+  #[serde(flatten)]
+  pub base: BaseResponse,
+  pub data: Option<LiveKitEgressInfo>,
+}
+
+#[post("/record/{room_id}")]
+async fn record_room(
+  path: web::Path<i32>,
+  data: web::Data<AppState>,
+  req: HttpRequest,
+) -> Result<impl Responder> {
+  let room_id = path.into_inner();
+  let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "找不到对应会议".to_string(),
+      },
+      data: None,
+    }));
+  };
+  if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "非管理员无权操作".to_string(),
+      },
+      data: None,
+    }));
+  }
+  let Some(mut client) = data.livekit_egress_client.try_lock() else {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "获取 egress 失败".to_string(),
+      },
+      data: None,
+    }));
+  };
+  let Ok(info) = client
+    .start_room_composite_egress(
+      &path.into_inner().to_string(),
+      vec![EgressOutput::File(EncodedFileOutput {
+        filepath: "{room_name}/{time}.mp4".to_string(),
+        output: Some(Output::S3(S3Upload {
+          access_key: data.s3_access_key.clone(),
+          secret: data.s3_secret.clone(),
+          endpoint: data.s3_endpoint.clone(),
+          bucket: data.s3_bucket.clone(),
+          force_path_style: true,
+          ..Default::default()
+        })),
+        ..Default::default()
+      })],
+      RoomCompositeOptions {
+        layout: "grid".to_string(),
+        encoding: H264_1080P_30,
+        audio_only: false,
+        ..Default::default()
+      },
+    )
+    .await
+  else {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "录制会议失败".to_string(),
+      },
+      data: None,
+    }));
+  };
+  drop(client);
+  Ok(web::Json(LiveKitEgressInfoRes {
+    base: BaseResponse {
+      ret: 0,
+      msg: "会议录制进行中".to_string(),
+    },
+    data: Some(LiveKitEgressInfo {
+      egress_id: info.egress_id,
+    }),
+  }))
+}
+#[post("/stopRecord/{room_id}/{egress_id}")]
+async fn stop_record(
+  path: web::Path<(i32, String)>,
+  data: web::Data<AppState>,
+  req: HttpRequest,
+) -> Result<impl Responder> {
+  let (room_id, egress_id) = path.into_inner();
+  let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "找不到对应会议".to_string(),
+    }));
+  };
+  if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "非管理员无权操作".to_string(),
+    }));
+  }
+  let Some(mut client) = data.livekit_egress_client.try_lock() else {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "获取 egress 失败".to_string(),
+    }));
+  };
+  let Ok(_) = client.stop_egress(&egress_id).await else {
+    return Ok(web::Json(BaseResponse {
+      ret: -1,
+      msg: "停止会议录制失败".to_string(),
+    }));
+  };
+  Ok(web::Json(BaseResponse {
+    ret: 0,
+    msg: "会议录制已停止".to_string(),
+  }))
+}
 
 #[derive(serde::Deserialize, serde::Serialize, TS)]
 #[ts(export, export_to = "../../app-tauri/src/types/room.ts")]

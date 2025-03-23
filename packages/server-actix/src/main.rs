@@ -10,11 +10,13 @@ use actix_web::{
 use actix_web_httpauth::{extractors::bearer::BearerAuth, middleware::HttpAuthentication};
 use api::{room::get_room_scope, user::get_user_scope};
 use common::{AppState, AuthClaims};
+use futures_util::lock::Mutex;
 use jsonwebtoken::{decode, DecodingKey, Validation};
+use livekit_api::services::egress::EgressClient;
 use log::{debug, info};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use sea_orm::Database;
-use std::env;
+use std::{env, sync::Arc};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -32,12 +34,23 @@ async fn main() -> std::io::Result<()> {
     .unwrap();
   ssl_builder.set_certificate_chain_file("cert.pem").unwrap();
 
+
+  let livekit_url = env::var("LIVEKIT_URL").expect("LIVEKIT_URL must be set in .env file");
+  let mut client = EgressClient::new(&livekit_url).unwrap();
   let state = AppState {
     jwt_auth_secret: env::var("JWT_SECRET").expect("JWT_SECRET must be set in .env file"),
     db_conn: db.unwrap(),
     livekit_key: env::var("LIVEKIT_API_KEY").expect("LIVEKIT_API_KEY must be set in .env file"),
     livekit_secret: env::var("LIVEKIT_API_SECRET")
       .expect("LIVEKIT_API_SECRET must be set in .env file"),
+    livekit_url,
+    livekit_egress_client: Arc::new(Mutex::new(client)),
+    s3_access_key: env::var("S3_STORAGE_ACCESS_KEY")
+      .expect("S3_STORAGE_ACCESS_KEY must be set in .env file"),
+    s3_secret: env::var("S3_STORAGE_SECRET").expect("S3_STORAGE_SECRET must be set in .env file"),
+    s3_endpoint: env::var("S3_STORAGE_ENDPOINT")
+      .expect("S3_STORAGE_ENDPOINT must be set in .env file"),
+    s3_bucket: env::var("S3_STORAGE_BUCKET").expect("S3_STORAGE_BUCKET must be set in .env file"),
   };
   // start server
   let server_url = env::var("SERVER_URL").expect("SERVER_URL must be set in .env file");

@@ -1974,9 +1974,9 @@ checksum = "4ee93343901ab17bd981295f2cf0026d4ad018c7c31ba84549a4ddbb47a45104"
 
 [[package]]
 name = "livekit-api"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bccba8f66e9eeef0edd98470bee3212ca4f4468793f18264995feb1ce4ab45dc"
+checksum = "fcfd2e0622b4ef8a6d534c742071fcad52d4388047bd2182696dc080c8174d4e"
 dependencies = [
  "async-tungstenite",
  "base64 0.21.7",
@@ -1985,10 +1985,12 @@ dependencies = [
  "isahc",
  "jsonwebtoken",
  "livekit-protocol",
- "livekit-runtime",
+ "livekit-runtime 0.3.1",
  "log",
  "parking_lot",
+ "pbjson-types",
  "prost",
+ "rand 0.9.0",
  "reqwest",
  "scopeguard",
  "serde",
@@ -2001,12 +2003,12 @@ dependencies = [
 
 [[package]]
 name = "livekit-protocol"
-version = "0.3.6"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a3554533d83fb849cb140641edcbf48628980ef816f50002202368fe908fb85"
+checksum = "0be4affc7654bf3f2c9571b02614ef27f436c5b68ee30db6151e8ab601f7e3fb"
 dependencies = [
  "futures-util",
- "livekit-runtime",
+ "livekit-runtime 0.4.0",
  "parking_lot",
  "pbjson",
  "pbjson-types",
@@ -2026,6 +2028,16 @@ dependencies = [
  "async-io",
  "async-std",
  "futures",
+]
+
+[[package]]
+name = "livekit-runtime"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "532e84c6cdc5fe774f2b5d9912597b5f3bea561927a48296d03e24549d21c3f6"
+dependencies = [
+ "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
@@ -3135,6 +3147,7 @@ dependencies = [
  "futures-util",
  "jsonwebtoken",
  "livekit-api",
+ "livekit-protocol",
  "log",
  "openssl",
  "password-auth",

@@ -4,4 +4,6 @@ export type AuthToken = { auth_token: string, };
 
 export type BaseResponse = { ret: number, msg: string, };
 
+export type LiveKitEgressInfo = { egress_id: string, };
+
 export type LiveKitToken = { livekit_token: string, };
