@@ -4,6 +4,8 @@ import type { LiveKitToken } from "./base";
 
 export type CreateRoomReq = { start_time: number, end_time: number, users_ids: Array<string>, };
 
+export type GptFilterReq = { prompt: string, };
+
 export type LiveKitEgressInfoRes = { data: LiveKitEgressInfo | null, ret: number, msg: string, };
 
 export type RoomListRes = { data: Array<RoomNode> | null, ret: number, msg: string, };

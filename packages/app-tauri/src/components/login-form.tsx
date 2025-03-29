@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authToken, userId } from '@/constants'
 import { cn } from '@/lib/utils'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
@@ -20,8 +20,8 @@ export function LoginForm({
   isEdit = false,
   onFinished,
   ...props
-}: React.ComponentPropsWithoutRef<'div'> & { isEdit?: boolean; onFinished?: () => void }) {
-  const [username, setUsername] = useState(sessionStorage.getItem(userId) ?? '')
+}: React.ComponentPropsWithoutRef<'div'> & { isEdit?: boolean, onFinished?: () => void }) {
+  const [username, setUsername] = useState(localStorage.getItem(userId) ?? '')
   const [password0, setPassword0] = useState('')
   const [password1, setPassword1] = useState('')
   const [password2, setPassword2] = useState('')
@@ -30,8 +30,8 @@ export function LoginForm({
   const handleSignIn = async (successTitle?: string = '登录成功') => {
     const res = await login({ id: username, password: password1 })
     if (res?.data?.auth_token) {
-      sessionStorage.setItem(authToken, res.data.auth_token)
-      sessionStorage.setItem(userId, username)
+      localStorage.setItem(authToken, res.data.auth_token)
+      localStorage.setItem(userId, username)
       toast.success(successTitle, {
         position: 'top-center',
       })
@@ -100,7 +100,8 @@ export function LoginForm({
                 disabled={(isEdit ? !password0 : (!username || !password1)) || ((isEdit || isSigningUp) && password1 !== password2)}
                 onClick={(e) => {
                   e.preventDefault()
-                  if (isEdit) handleEdit()
+                  if (isEdit)
+                    handleEdit()
                   else isSigningUp ? handleSignUp() : handleSignIn()
                   onFinished?.()
                 }}

@@ -51,6 +51,8 @@ async fn main() -> std::io::Result<()> {
     s3_endpoint: env::var("S3_STORAGE_ENDPOINT")
       .expect("S3_STORAGE_ENDPOINT must be set in .env file"),
     s3_bucket: env::var("S3_STORAGE_BUCKET").expect("S3_STORAGE_BUCKET must be set in .env file"),
+    gpt_api_key: env::var("GPT_API_KEY").expect("GPT_API_KEY must be set in .env file"),
+    gpt_base_url: env::var("GPT_BASE_URL").expect("GPT_BASE_URL must be set in .env file"),
   };
   // start server
   let server_url = env::var("SERVER_URL").expect("SERVER_URL must be set in .env file");

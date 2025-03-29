@@ -21,3 +21,12 @@ RUST_LOG=server_actix=debug cargo run
 # generate api types to packages/app-tauri/src/types
 cargo test export_bindings
 ```
+
+# dev
+update entity: 
+1. edit migration files
+2. run: 
+```bash
+DATABASE_URL="sqlite://db.sqlite?mode=rwc" sea-orm-cli migrate refresh
+sea-orm-cli generate entity -o src/entities --with-serde both 
+```

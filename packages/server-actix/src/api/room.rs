@@ -2,8 +2,8 @@ use actix_web::{
   delete, error, get, post, put, web, HttpMessage, HttpRequest, Responder, Result, Scope,
 };
 use livekit_api::access_token;
-use livekit_api::services::egress::encoding::{EncodingOptions, H264_1080P_30};
-use livekit_api::services::egress::{EgressClient, EgressOutput, RoomCompositeOptions};
+use livekit_api::services::egress::encoding::H264_1080P_30;
+use livekit_api::services::egress::{EgressOutput, RoomCompositeOptions};
 use livekit_protocol::encoded_file_output::Output;
 use livekit_protocol::{EncodedFileOutput, S3Upload};
 use log::debug;
@@ -32,6 +32,7 @@ async fn record_room(
   data: web::Data<AppState>,
   req: HttpRequest,
 ) -> Result<impl Responder> {
+
   let room_id = path.into_inner();
   let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
     return Ok(web::Json(LiveKitEgressInfoRes {
@@ -62,7 +63,7 @@ async fn record_room(
   };
   let Ok(info) = client
     .start_room_composite_egress(
-      &path.into_inner().to_string(),
+      &room_id.to_string(),
       vec![EgressOutput::File(EncodedFileOutput {
         filepath: "{room_name}/{time}.mp4".to_string(),
         output: Some(Output::S3(S3Upload {
@@ -92,6 +93,7 @@ async fn record_room(
       data: None,
     }));
   };
+  debug!("info {:?}", info);
   drop(client);
   Ok(web::Json(LiveKitEgressInfoRes {
     base: BaseResponse {
@@ -504,6 +506,8 @@ async fn update_room(
 
 pub fn get_room_scope() -> Scope {
   web::scope("/api/room")
+    .service(record_room)
+    .service(stop_record)
     .service(get_room_token)
     .service(get_rooms)
     .service(create_room)

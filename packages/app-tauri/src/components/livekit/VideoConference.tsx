@@ -6,7 +6,7 @@ import type { MessageFormatter } from '@livekit/components-react'
 import { isEqualTrackRef, isTrackReference, log, supportsScreenSharing } from '@livekit/components-core'
 import { LayoutContextProvider, useCreateLayoutContext, useDisconnectButton, usePersistentUserChoices, usePinnedTracks, useTracks } from '@livekit/components-react'
 import { RoomEvent, Track } from 'livekit-client'
-import { MicIcon, MicOffIcon, PhoneIcon, ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
+import { CircleIcon, CircleOffIcon, MicIcon, MicOffIcon, PhoneIcon, ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useNavigate } from 'react-router'
@@ -134,6 +134,13 @@ export default function VideoConference({
     [setIsScreenShareEnabled],
   )
 
+  const [isRecording, setRecording] = useState(false);
+
+  const handleRecord = async () => {
+    // if (isRecording) 
+    setRecording(!isRecording);
+  }
+
   return (
     <LayoutContextProvider
       value={layoutContext}
@@ -182,6 +189,9 @@ export default function VideoConference({
             )
           }
           <Chat></Chat>
+          <Button size="icon" className="rounded-full w-14 h-14" onClick={handleDisconnect}>
+            { isRecording ? <CircleOffIcon className="!w-8 !h-8" /> : <CircleIcon className="!w-8 !h-8" />}
+          </Button>
           <Button variant="destructive" size="icon" className="rounded-full w-14 h-14" onClick={handleDisconnect}>
             <PhoneIcon className="!w-8 !h-8" />
           </Button>

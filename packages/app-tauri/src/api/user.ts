@@ -1,5 +1,6 @@
 import type { BaseResponse } from '@/types/base'
-import type { UserLoginRes, UserUpdateReq } from '@/types/user'
+import type { GptFilterReq } from '@/types/room'
+import type { GptFilterRes, UserLoginRes, UserUpdateReq } from '@/types/user'
 import { createRequest } from './base'
 
 export const createUser = createRequest<{ id: string, password: string }, BaseResponse>({
@@ -21,5 +22,10 @@ export const deleteUser = createRequest<void, BaseResponse>({
 
 export const updatePassword = createRequest<UserUpdateReq, BaseResponse>({
   url: '/api/user/update',
+  method: 'POST',
+})
+
+export const getGptFilter = createRequest<GptFilterReq, GptFilterRes>({
+  url: '/api/user/getGptFilter',
   method: 'POST',
 })

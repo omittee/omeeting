@@ -41,7 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const location = useLocation()
-  if (!sessionStorage.getItem(authToken) && location.pathname !== '/auth') {
+  if (!localStorage.getItem(authToken) && location.pathname !== '/auth') {
     return <Navigate to="/auth" replace />
   }
   return (

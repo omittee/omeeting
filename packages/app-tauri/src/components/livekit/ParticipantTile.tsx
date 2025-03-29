@@ -1,5 +1,6 @@
 import type { ParticipantClickEvent, TrackReferenceOrPlaceholder } from '@livekit/components-core'
 import type { Participant } from 'livekit-client'
+import { filterCssKey } from '@/constants'
 import { isTrackReference, isTrackReferencePinned } from '@livekit/components-core'
 import { AudioTrack, ConnectionQualityIndicator, FocusToggle, LockLockedIcon, ParticipantContext, ParticipantName, ParticipantPlaceholder, ScreenShareIcon, TrackMutedIndicator, TrackRefContext, useEnsureTrackRef, useFeatureContext, useIsEncrypted, useMaybeLayoutContext, useMaybeParticipantContext, useMaybeTrackRefContext, useParticipantTile, VideoTrack } from '@livekit/components-react'
 import { Track } from 'livekit-client'
@@ -82,6 +83,7 @@ export const ParticipantTile: (
 ) => React.ReactNode = /* @__PURE__ */ function ParticipantTile(
   { ref, trackRef, children, onParticipantClick, disableSpeakingIndicator, ...htmlProps }: ParticipantTileProps & { ref: React.RefObject<HTMLDivElement> },
 ) {
+  const filterCss = localStorage.getItem(filterCssKey) ?? ''
   const trackReference = useEnsureTrackRef(trackRef)
 
   const { elementProps } = useParticipantTile<HTMLDivElement>({
@@ -117,11 +119,12 @@ export const ParticipantTile: (
           {children ?? (
             <>
               {(isTrackReference(trackReference)
-              && (trackReference.publication?.kind === 'video'
-                || trackReference.source === Track.Source.Camera
-                || trackReference.source === Track.Source.ScreenShare)
+                && (trackReference.publication?.kind === 'video'
+                  || trackReference.source === Track.Source.Camera
+                  || trackReference.source === Track.Source.ScreenShare)
                 ? (
                     <VideoTrack
+                      style={{ filter: filterCss }}
                       trackRef={trackReference}
                       onSubscriptionStatusChanged={handleSubscribe}
                       manageSubscription={autoManageSubscription}
@@ -134,7 +137,7 @@ export const ParticipantTile: (
                         onSubscriptionStatusChanged={handleSubscribe}
                       />
                     )
-                  )) || (<div className='h-52 bg-black'></div>)}
+                  )) || (<div className="h-52 bg-black"></div>)}
               <div className="lk-participant-placeholder">
                 <ParticipantPlaceholder />
               </div>

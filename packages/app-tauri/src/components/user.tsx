@@ -30,27 +30,30 @@ import { LoginForm } from './login-form'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from './ui/dialog'
+import { FilterForm } from './filter-form'
 
 export function User({
   className,
 }: ComponentProps<'div'>) {
-  const name = sessionStorage.getItem(userId) ?? ''
+  const name = localStorage.getItem(userId) ?? ''
   const navigate = useNavigate()
 
   const logout = () => {
-    sessionStorage.removeItem(authToken)
-    sessionStorage.removeItem(userId)
+    localStorage.removeItem(authToken)
+    localStorage.removeItem(userId)
     navigate('/auth')
   }
   const handleDeleteAcct = async () => {
     await deleteUser()
     logout()
   }
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false)
+
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   return (
     <div className={className}>
       <AlertDialog>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -84,14 +87,14 @@ export function User({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsFilterDialogOpen(true)}>
                   <Sparkles />
-                  Upgrade to Pro
+                  编辑滤镜
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DialogTrigger className='w-full'>
+                <DialogTrigger className="w-full">
                   <DropdownMenuItem>
                     <BadgeCheck />
                     账号
@@ -130,7 +133,13 @@ export function User({
           </AlertDialogContent>
           <DialogContent>
             <DialogTitle></DialogTitle>
-            <LoginForm isEdit onFinished={() => setIsDialogOpen(false)}/>
+            <LoginForm isEdit onFinished={() => setIsLoginDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+          <DialogContent>
+            <DialogTitle></DialogTitle>
+            <FilterForm />
           </DialogContent>
         </Dialog>
       </AlertDialog>

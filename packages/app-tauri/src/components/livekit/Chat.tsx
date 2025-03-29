@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input'
 import { userId } from '@/constants'
 import { cn } from '@/lib/utils'
 import { useChat } from '@livekit/components-react'
+import { format } from 'date-fns'
 import { MessageCircleIcon, Send } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '../ui/drawer'
 import { ScrollArea } from '../ui/scroll-area'
 
 export default function Chat() {
-  const username = sessionStorage.getItem(userId) ?? ''
+  const username = localStorage.getItem(userId) ?? ''
   const [input, setInput] = useState('')
 
   const { send, chatMessages, isSending } = useChat()
@@ -45,20 +46,23 @@ export default function Chat() {
                 {chatMessages.map((message, index) => (
                   <div
                     key={index}
-                    className={cn(
-                      'flex w-max max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm',
-                      message.from?.identity === username
-                        ? 'ml-auto bg-primary text-primary-foreground'
-                        : 'bg-muted',
-                    )}
+                    className="w-full text-sm"
                   >
-
-                    {message.message}
+                    <div className={cn('text-xs pb-1', message.from?.identity === username ? 'text-right' : '')}>{ `${message.from?.identity} ${format(new Date(message.timestamp), 'MM/dd-HH:mm:ss')}` }</div>
+                    <div
+                      className={cn(
+                        'w-max max-w-[75%] flex flex-col gap-2 rounded-lg px-3 py-2',
+                        message.from?.identity === username
+                          ? 'ml-auto bg-primary text-primary-foreground'
+                          : 'bg-muted',
+                      )}
+                    >
+                      {message.message}
+                    </div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-
           </CardContent>
           <CardFooter>
             <form

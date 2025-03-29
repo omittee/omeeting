@@ -15,3 +15,8 @@ adb reverse tcp:8081 tcp:8081
 # export proxy port
 adb reverse tcp:8899 tcp:8899
 ```
+
+# todo
+1. filter => ai generate
+2. record cloudflare
+3. webgpu whisper => chat

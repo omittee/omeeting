@@ -28,7 +28,7 @@ export function RoomForm({
   isCreating,
   data,
   close,
-  onFinished
+  onFinished,
 }: ComponentProps<'div'> & {
   isCreating: boolean
   data?: {
@@ -38,10 +38,10 @@ export function RoomForm({
     users_ids: string[]
     admin: string
   }
-  close?: () => void,
+  close?: () => void
   onFinished?: () => void
 }) {
-  const name = sessionStorage.getItem(userId) ?? ''
+  const name = localStorage.getItem(userId) ?? ''
   const diffMin = data ? (data.end_time - data.start_time) / 60 : 60
   const defaultData = {
     start_time: data?.start_time ? new Date(data.start_time * 1000) : new Date(),
@@ -53,11 +53,12 @@ export function RoomForm({
   const handleCreateRoom = async () => {
     const start_time = Math.floor(roomData.start_time.getTime() / 1000)
     const [h, m] = roomData.end_time
-    await createRoom({
+    const res = await createRoom({
       start_time,
       end_time: start_time + (h * 60 + m) * 60,
       users_ids: [...new Set(roomData.users_ids.trim().split(/\s+/).concat(name))],
     })
+    if (res?.ret !== 0) return;
     toast.success('会议创建成功', { position: 'top-center' })
     onFinished?.()
     if (close) {
@@ -65,7 +66,7 @@ export function RoomForm({
     }
     else {
       setRoomData({
-        ...defaultData
+        ...defaultData,
       })
     }
   }
@@ -77,7 +78,7 @@ export function RoomForm({
       end_time: start_time + (h * 60 + m) * 60,
       user_ids: [...new Set(roomData.users_ids.trim().split(/\s+/).concat(name))],
       admin: roomData.admin ?? null,
-      is_canceled: null
+      is_canceled: null,
     }, data?.id.toString())
     toast.success('会议更新成功', { position: 'top-center' })
     onFinished?.()
@@ -86,7 +87,7 @@ export function RoomForm({
     }
     else {
       setRoomData({
-        ...defaultData
+        ...defaultData,
       })
     }
   }
@@ -158,10 +159,14 @@ export function RoomForm({
                   <Input id="users" value={roomData.admin} required onChange={e => setRoomData({ ...roomData, admin: e.target.value })} />
                 </div>
               )}
-              <Button className="w-full" disabled={roomData.users_ids === ''} onClick={(e) => {
-                e.preventDefault();
-                isCreating ? handleCreateRoom() : handleUpdateRoom()
-              }}>
+              <Button
+                className="w-full"
+                disabled={roomData.users_ids === ''}
+                onClick={(e) => {
+                  e.preventDefault()
+                  isCreating ? handleCreateRoom() : handleUpdateRoom()
+                }}
+              >
                 { isCreating ? '创建会议' : '更新' }
               </Button>
             </div>
