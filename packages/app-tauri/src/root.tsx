@@ -13,6 +13,11 @@ import {
   useRoutes,
 } from 'react-router'
 import { Toaster } from 'sonner'
+// import appVadAsr from './assets/vad-asr/app-vad-asr.js?url'
+// import sherpaOnnxAsr from './assets/vad-asr/sherpa-onnx-asr.js?url'
+// import sherpaOnnxVad from './assets/vad-asr/sherpa-onnx-vad.js?url'
+// import sherpaOnnxData from './assets/vad-asr/sherpa-onnx-wasm-main-vad-asr.data?url'
+// import sherpaOnnxModel from './assets/vad-asr/sherpa-onnx-wasm-main-vad-asr.js?url'
 import { authToken, userId } from './constants'
 import stylesheet from './index.css?url'
 import '@livekit/components-styles'
@@ -34,6 +39,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
+
+        <script src="/app-vad-asr.js"></script>
+        <script src="/sherpa-onnx-wasm-main-vad-asr.js"></script>
+        <script src="/sherpa-onnx-asr.js"></script>
+        <script src="/sherpa-onnx-vad.js"></script>
       </body>
     </html>
   )

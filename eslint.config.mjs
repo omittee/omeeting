@@ -5,6 +5,7 @@ export default antfu({
   formatters: true,
   typescript: true,
   rules: {
-    "ts/consistent-type-definitions": "off"
+    "ts/consistent-type-definitions": "off",
+    "no-console": "off"
   }
 })

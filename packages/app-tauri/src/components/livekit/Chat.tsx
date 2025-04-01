@@ -6,13 +6,15 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { userId } from '@/constants'
+import { useVadAsr } from '@/hooks/use-vad-asr'
 import { cn } from '@/lib/utils'
 import { useChat } from '@livekit/components-react'
 import { format } from 'date-fns'
-import { MessageCircleIcon, Send } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { Loader2Icon, MessageCircleIcon, Send } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '../ui/drawer'
 import { ScrollArea } from '../ui/scroll-area'
+import { Switch } from '../ui/switch'
 
 export default function Chat() {
   const username = localStorage.getItem(userId) ?? ''
@@ -20,13 +22,20 @@ export default function Chat() {
 
   const { send, chatMessages, isSending } = useChat()
 
-  const handleSend = useCallback(async (event: Event) => {
-    event.preventDefault()
+  const handleSend = useCallback(async () => {
     if (input.trim().length === 0)
       return
     await send(input)
     setInput('')
   }, [input, send])
+
+  const { switchAsr, curResTxt, isInitialized } = useVadAsr()
+
+  useEffect(() => {
+    if (curResTxt !== '')
+      send(curResTxt)
+  }, [curResTxt, send])
+
   return (
     <Drawer>
       <DrawerTrigger asChild>
@@ -38,7 +47,20 @@ export default function Chat() {
         </Button>
       </DrawerTrigger>
       <DrawerContent>
-        <DrawerTitle></DrawerTitle>
+        <DrawerTitle className="py-2">
+          <div className="w-full flex justify-center">
+            <Switch className='mr-2' onCheckedChange={switchAsr} disabled={!isInitialized} />
+            { isInitialized
+              ? '开启 AI 语音识别'
+              : (
+                  <>
+                    <Loader2Icon className="animate-spin" />
+                    AI 模型初始化中
+                  </>
+                )}
+
+          </div>
+        </DrawerTitle>
         <Card>
           <CardContent className="pt-4">
             <ScrollArea className="h-72">
@@ -66,7 +88,10 @@ export default function Chat() {
           </CardContent>
           <CardFooter>
             <form
-              onSubmit={handleSend}
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSend()
+              }}
               className="flex w-full items-center space-x-2"
             >
               <Input

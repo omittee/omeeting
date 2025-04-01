@@ -27,7 +27,7 @@ export function LoginForm({
   const [password2, setPassword2] = useState('')
   const [isSigningUp, setIsSigningUp] = useState(false)
   const navigate = useNavigate()
-  const handleSignIn = async (successTitle?: string = '登录成功') => {
+  const handleSignIn = async (successTitle: string = '登录成功') => {
     const res = await login({ id: username, password: password1 })
     if (res?.data?.auth_token) {
       localStorage.setItem(authToken, res.data.auth_token)

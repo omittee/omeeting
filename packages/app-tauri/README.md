@@ -10,6 +10,8 @@ cargo tauri android dev
 # set proxy
 # set adb proxy whistle
 adb shell settings put global http_proxy 127.0.0.1:8899
+# export client port
+adb reverse tcp:1420 tcp:1420
 # export server port
 adb reverse tcp:8081 tcp:8081
 # export proxy port
