@@ -14,33 +14,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { authToken, userId } from '@/constants'
+import { authTokenKey, userIdKey } from '@/constants'
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   DeleteIcon,
   LogOut,
   Sparkles,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { FilterForm } from './filter-form'
 import { LoginForm } from './login-form'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from './ui/dialog'
-import { FilterForm } from './filter-form'
 
 export function User({
   className,
 }: ComponentProps<'div'>) {
-  const name = localStorage.getItem(userId) ?? ''
+  const name = localStorage.getItem(userIdKey) ?? ''
   const navigate = useNavigate()
 
   const logout = () => {
-    localStorage.removeItem(authToken)
-    localStorage.removeItem(userId)
+    localStorage.removeItem(authTokenKey)
+    localStorage.removeItem(userIdKey)
     navigate('/auth')
   }
   const handleDeleteAcct = async () => {
@@ -100,10 +99,6 @@ export function User({
                     账号
                   </DropdownMenuItem>
                 </DialogTrigger>
-                <DropdownMenuItem>
-                  <Bell />
-                  通知
-                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>

@@ -22,6 +22,7 @@ impl MigrationTrait for Migration {
           )
           .col(ColumnDef::new(Room::Code).string().not_null())
           .col(ColumnDef::new(Room::IsCanceled).boolean().not_null().default(false))
+          .col(ColumnDef::new(Room::CurEgressId).string().not_null().default(""))
           .col(ColumnDef::new(Room::RecordVideos).string().not_null().default(""))
           .col(ColumnDef::new(Room::StartTime).date_time().not_null())
           .col(ColumnDef::new(Room::EndTime).date_time().not_null())
@@ -54,4 +55,5 @@ pub enum Room {
   EndTime,
   IsCanceled,
   RecordVideos,
+  CurEgressId,
 }

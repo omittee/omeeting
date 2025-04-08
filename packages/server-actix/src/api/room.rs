@@ -32,12 +32,11 @@ async fn record_room(
   data: web::Data<AppState>,
   req: HttpRequest,
 ) -> Result<impl Responder> {
-
   let room_id = path.into_inner();
   let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
     return Ok(web::Json(LiveKitEgressInfoRes {
       base: BaseResponse {
-        ret: -1,
+        ret: -404,
         msg: "找不到对应会议".to_string(),
       },
       data: None,
@@ -46,10 +45,21 @@ async fn record_room(
   if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
     return Ok(web::Json(LiveKitEgressInfoRes {
       base: BaseResponse {
-        ret: -1,
+        ret: -401,
         msg: "非管理员无权操作".to_string(),
       },
       data: None,
+    }));
+  }
+  if !room.cur_egress_id.is_empty() {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -400,
+        msg: "会议已在录制中".to_string(),
+      },
+      data: Some(LiveKitEgressInfo {
+        egress_id: room.cur_egress_id,
+      }),
     }));
   }
   let Some(mut client) = data.livekit_egress_client.try_lock() else {
@@ -93,7 +103,42 @@ async fn record_room(
       data: None,
     }));
   };
-  debug!("info {:?}", info);
+  if info.file_results.is_empty() {
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -1,
+        msg: "录制会议失败".to_string(),
+      },
+      data: None,
+    }));
+  }
+  let file_name = info.file_results[0].filename.clone();
+  let mut record_videos = room.record_videos.clone();
+  if !record_videos.is_empty() {
+    record_videos.push_str(";");
+  }
+  record_videos.push_str(&file_name);
+  
+  let Ok(_) = RoomService::update_room(
+    &data.db_conn,
+    room::ActiveModel {
+      id: ActiveValue::Set(room.id),
+      cur_egress_id: ActiveValue::Set(info.egress_id.clone()),
+      record_videos: ActiveValue::Set(record_videos),
+      ..Default::default()
+    },
+  )
+  .await
+  else {
+    let _ = client.stop_egress(&info.egress_id).await;
+    return Ok(web::Json(LiveKitEgressInfoRes {
+      base: BaseResponse {
+        ret: -2,
+        msg: "录制会议失败".to_string(),
+      },
+      data: None,
+    }));
+  };
   drop(client);
   Ok(web::Json(LiveKitEgressInfoRes {
     base: BaseResponse {
@@ -114,14 +159,20 @@ async fn stop_record(
   let (room_id, egress_id) = path.into_inner();
   let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
     return Ok(web::Json(BaseResponse {
-      ret: -1,
+      ret: -404,
       msg: "找不到对应会议".to_string(),
     }));
   };
   if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
     return Ok(web::Json(BaseResponse {
-      ret: -1,
+      ret: -401,
       msg: "非管理员无权操作".to_string(),
+    }));
+  }
+  if room.cur_egress_id.is_empty() {
+    return Ok(web::Json(BaseResponse {
+      ret: -400,
+      msg: "会议未在录制中".to_string(),
     }));
   }
   let Some(mut client) = data.livekit_egress_client.try_lock() else {
@@ -133,6 +184,21 @@ async fn stop_record(
   let Ok(_) = client.stop_egress(&egress_id).await else {
     return Ok(web::Json(BaseResponse {
       ret: -1,
+      msg: "停止会议录制失败".to_string(),
+    }));
+  };
+  let Ok(_) = RoomService::update_room(
+    &data.db_conn,
+    room::ActiveModel {
+      id: ActiveValue::Set(room.id),
+      cur_egress_id: ActiveValue::Set("".to_string()),
+      ..Default::default()
+    },
+  )
+  .await
+  else {
+    return Ok(web::Json(BaseResponse {
+      ret: -2,
       msg: "停止会议录制失败".to_string(),
     }));
   };
@@ -173,7 +239,7 @@ async fn get_room_token(
   else {
     return Ok(web::Json(RoomTokenRes {
       base: BaseResponse {
-        ret: -1,
+        ret: -404,
         msg: "找不到对应会议".to_string(),
       },
       data: None,
@@ -213,7 +279,10 @@ async fn get_room_token(
       ret: 0,
       msg: "获取 room token 成功".to_string(),
     },
-    data: Some(LiveKitToken { livekit_token }),
+    data: Some(LiveKitToken {
+      livekit_token,
+      room_id: room.id.to_string(),
+    }),
   }))
 }
 
@@ -227,6 +296,8 @@ pub struct RoomNode {
   pub end_time: f64,
   pub admin: String,
   pub users_ids: Vec<String>,
+  pub record_videos: String,
+  pub video_base: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, TS)]
@@ -265,6 +336,8 @@ async fn get_rooms(req: HttpRequest, data: web::Data<AppState>) -> Result<impl R
       end_time: x.end_time.timestamp() as f64,
       admin: x.admin,
       users_ids: t.into_iter().map(|x| x.user_id).collect(),
+      record_videos: x.record_videos,
+      video_base: data.s3_public_url.clone(),
     });
   }
 
@@ -371,13 +444,13 @@ async fn create_room(
 //   let room_id = path.into_inner();
 //   let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
 //     return Ok(web::Json(BaseResponse {
-//       ret: -1,
+//       ret: -404,
 //       msg: "找不到对应会议".to_string(),
 //     }));
 //   };
 //   if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
 //     return Ok(web::Json(BaseResponse {
-//       ret: -1,
+//       ret: -401,
 //       msg: "非管理员无权操作".to_string(),
 //     }));
 //   }
@@ -420,13 +493,13 @@ async fn update_room(
   let room_id = path.into_inner();
   let Ok(room) = RoomService::get_room_by_id(&data.db_conn, room_id).await else {
     return Ok(web::Json(BaseResponse {
-      ret: -1,
+      ret: -404,
       msg: "找不到对应会议".to_string(),
     }));
   };
   if room.admin != req.extensions().get::<AuthClaims>().unwrap().id {
     return Ok(web::Json(BaseResponse {
-      ret: -1,
+      ret: -401,
       msg: "非管理员无权操作".to_string(),
     }));
   }

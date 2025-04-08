@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { authToken, userId } from '@/constants'
+import { authTokenKey, userIdKey } from '@/constants'
 import { cn } from '@/lib/utils'
 import { HelpCircleIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -41,7 +41,7 @@ export function RoomForm({
   close?: () => void
   onFinished?: () => void
 }) {
-  const name = localStorage.getItem(userId) ?? ''
+  const name = localStorage.getItem(userIdKey) ?? ''
   const diffMin = data ? (data.end_time - data.start_time) / 60 : 60
   const defaultData = {
     start_time: data?.start_time ? new Date(data.start_time * 1000) : new Date(),
@@ -58,7 +58,8 @@ export function RoomForm({
       end_time: start_time + (h * 60 + m) * 60,
       users_ids: [...new Set(roomData.users_ids.trim().split(/\s+/).concat(name))],
     })
-    if (res?.ret !== 0) return;
+    if (res?.ret !== 0)
+      return
     toast.success('会议创建成功', { position: 'top-center' })
     onFinished?.()
     if (close) {
@@ -106,6 +107,7 @@ export function RoomForm({
                   className="max-w-full"
                   dateTime={roomData.start_time}
                   onDateTimeChange={(date) => {
+                    console.log('date', date)
                     setRoomData({ ...roomData, start_time: date })
                   }}
                 />

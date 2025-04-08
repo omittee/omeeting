@@ -3,13 +3,15 @@ import type {
   WidgetState,
 } from '@livekit/components-core'
 import type { MessageFormatter } from '@livekit/components-react'
+import { startRecord, stopRecord } from '@/api/room'
 import { isEqualTrackRef, isTrackReference, log, supportsScreenSharing } from '@livekit/components-core'
 import { LayoutContextProvider, useCreateLayoutContext, useDisconnectButton, usePersistentUserChoices, usePinnedTracks, useTracks } from '@livekit/components-react'
 import { RoomEvent, Track } from 'livekit-client'
 import { CircleIcon, CircleOffIcon, MicIcon, MicOffIcon, PhoneIcon, ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { useNavigate } from 'react-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { toast } from 'sonner'
 import { Button } from '../ui/button'
 import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel'
 import Chat from './Chat'
@@ -33,6 +35,7 @@ export default function VideoConference({
     unreadMessages: 0,
     showSettings: false,
   })
+
   const lastAutoFocusedScreenShareTrack = useRef<TrackReferenceOrPlaceholder | null>(null)
 
   const tracks = useTracks(
@@ -134,11 +137,26 @@ export default function VideoConference({
     [setIsScreenShareEnabled],
   )
 
-  const [isRecording, setRecording] = useState(false);
+  const [egressId, setEgressId] = useState('')
 
+  const [searchParams] = useSearchParams()
   const handleRecord = async () => {
-    // if (isRecording) 
-    setRecording(!isRecording);
+    if (egressId) {
+      const res = await stopRecord(undefined, `${searchParams.get('roomId')}/${egressId}`)
+      setEgressId('')
+      if (res?.ret === 0) {
+        toast.success(res.msg, { position: 'top-center' })
+      }
+    }
+    else {
+      const res = await startRecord(undefined, searchParams.get('roomId') ?? '')
+      const eid = res?.data?.egress_id
+      if (eid)
+        setEgressId(eid)
+      if (res?.ret === 0) {
+        toast.success(res.msg, { position: 'top-center' })
+      }
+    }
   }
 
   return (
@@ -155,7 +173,7 @@ export default function VideoConference({
               <CarouselContent>
                 <Tracks tracks={carouselTracks}>
                   <CarouselItem>
-                    <ParticipantTile className='h-full'/>
+                    <ParticipantTile className="h-full" />
                   </CarouselItem>
                 </Tracks>
               </CarouselContent>
@@ -189,8 +207,8 @@ export default function VideoConference({
             )
           }
           <Chat></Chat>
-          <Button size="icon" className="rounded-full w-14 h-14" onClick={handleDisconnect}>
-            { isRecording ? <CircleOffIcon className="!w-8 !h-8" /> : <CircleIcon className="!w-8 !h-8" />}
+          <Button size="icon" className="rounded-full w-14 h-14" onClick={handleRecord}>
+            { egressId ? <CircleOffIcon className="!w-8 !h-8" /> : <CircleIcon className="!w-8 !h-8" />}
           </Button>
           <Button variant="destructive" size="icon" className="rounded-full w-14 h-14" onClick={handleDisconnect}>
             <PhoneIcon className="!w-8 !h-8" />

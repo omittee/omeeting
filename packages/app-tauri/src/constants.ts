@@ -1,5 +1,5 @@
-export const authToken = 'authToken'
+export const authTokenKey = 'authToken'
 
-export const userId = 'userId'
+export const userIdKey = 'userId'
 
 export const filterCssKey = 'filterCss'

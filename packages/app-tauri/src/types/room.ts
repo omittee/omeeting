@@ -10,7 +10,7 @@ export type LiveKitEgressInfoRes = { data: LiveKitEgressInfo | null, ret: number
 
 export type RoomListRes = { data: Array<RoomNode> | null, ret: number, msg: string, };
 
-export type RoomNode = { id: number, code: string, is_canceled: boolean, start_time: number, end_time: number, admin: string, users_ids: Array<string>, };
+export type RoomNode = { id: number, code: string, is_canceled: boolean, start_time: number, end_time: number, admin: string, users_ids: Array<string>, record_videos: string, video_base: string, };
 
 export type RoomTokenRes = { data: LiveKitToken | null, ret: number, msg: string, };
 

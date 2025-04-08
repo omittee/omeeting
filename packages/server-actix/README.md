@@ -10,6 +10,12 @@ echo "JWT_SECRET=<your jwt secret>" > .env
 echo "LIVEKIT_API_KEY=<your livekit api key>" > .env
 echo "LIVEKIT_API_SECRET=<your livekit api secret>" > .env
 echo "LIVEKIT_URL=<your livekit server url, e.g. wss://xxx.livekit.cloud>" > .env
+echo "S3_STORAGE_ACCESS_KEY=<your S3 compatible storage key>" > .env
+echo "S3_STORAGE_SECRET=<your s3 compatible storage secret>" > .env
+echo "S3_STORAGE_BUCKET=<your s3 compatible storage bucket name>" > .env
+echo "S3_STORAGE_ENDPOINT=<your s3 compatible storage endpoint>" > .env
+echo "GPT_API_KEY=<your openai api compatible api key>" > .env
+echo "GPT_BASE_URL=<your openai api compatible completion url, e.g. >"
 ```
 
 run:

@@ -28,6 +28,6 @@ export const startRecord = createRequest<void, LiveKitEgressInfoRes>({
 })
 
 export const stopRecord = createRequest<void, LiveKitEgressInfoRes>({
-  url: '/api/room/stopRecord/{egress_id}',
+  url: '/api/room/stopRecord',
   method: 'POST',
 })

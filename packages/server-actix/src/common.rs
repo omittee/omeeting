@@ -26,6 +26,7 @@ pub struct Filter {
 #[derive(serde::Deserialize, serde::Serialize, TS)]
 #[ts(export, export_to = "../../app-tauri/src/types/base.ts")]
 pub struct LiveKitToken {
+  pub room_id: String,
   pub livekit_token: String,
 }
 
@@ -47,6 +48,7 @@ pub struct AppState {
   pub s3_secret: String,
   pub s3_endpoint: String,
   pub s3_bucket: String,
+  pub s3_public_url: String,
   pub gpt_api_key: String,
   pub gpt_base_url: String,
 }

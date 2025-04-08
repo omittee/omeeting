@@ -1,3 +1,4 @@
+import type { LiveKitToken } from '@/types/base'
 import type { RoomNode } from '@/types/room'
 import type { HTMLAttributes } from 'react'
 import type { Route } from './+types/home'
@@ -7,24 +8,22 @@ import { RoomInfos } from '@/components/room-infos'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp'
-import { Skeleton } from '@/components/ui/skeleton'
 import { User } from '@/components/user'
+import { userIdKey } from '@/constants'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-
-// export async function clientLoader() {
-//   const res = await getRooms()
-//   return res?.data ?? []
-// }
 
 export default function Home() {
   const [code, setCode] = useState('')
   const navigate = useNavigate()
+  const userId = localStorage.getItem(userIdKey)
   const handleJoinRoom = async (code: string) => {
     const res = await getRoomToken(undefined, code)
-    const token = res?.data?.livekit_token
-    if (!token) return
-    navigate(`/room?liveKitUrl=${import.meta.env.VITE_LiveKitUrl}&token=${token}`)
+    const { livekit_token: token, room_id } = (res?.data ?? {}) as LiveKitToken
+    if (!token || !room_id)
+      return
+    const wsUrl = import.meta.env.DEV ? import.meta.env.VITE_REMOTE_LiveKitUrl : import.meta.env.VITE_LiveKitUrl
+    navigate(`/room?liveKitUrl=${wsUrl}&token=${token}&roomId=${room_id}&userId=${userId}`)
   }
   const [loaderData, setLoaderData] = useState<RoomNode[]>([])
   const refresh = async () => {
@@ -36,12 +35,12 @@ export default function Home() {
   }, [])
   return (
     <div className="p-8 h-full bg-slate-100 flex flex-col">
-      <div className='text-4xl font-extrabold pb-4 italic'>Omeeting</div>
+      <div className="text-4xl font-extrabold pb-4 italic">Omeeting</div>
       <User />
       <div className="flex w-full pt-10">
         <Dialog>
           <DialogTrigger asChild>
-            <Button className='mr-4'>加入会议</Button>
+            <Button className="mr-4">加入会议</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogTitle>请输入会议号</DialogTitle>
@@ -77,13 +76,13 @@ export default function Home() {
           <DialogTrigger asChild>
             <Button>创建会议</Button>
           </DialogTrigger>
-          <DialogContent >
+          <DialogContent>
             <DialogTitle></DialogTitle>
-            <RoomForm isCreating onFinished={refresh}/>
+            <RoomForm isCreating onFinished={refresh} />
           </DialogContent>
         </Dialog>
       </div>
-      <RoomInfos className="flex-1 overflow-y-auto" data={loaderData} onJoinRoom={handleJoinRoom} onFinished={refresh} ></RoomInfos>
+      <RoomInfos className="flex-1 overflow-y-auto" data={loaderData} onJoinRoom={handleJoinRoom} onFinished={refresh}></RoomInfos>
     </div>
   )
 }

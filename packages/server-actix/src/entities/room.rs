@@ -10,6 +10,7 @@ pub struct Model {
   pub id: i32,
   pub code: String,
   pub is_canceled: bool,
+  pub cur_egress_id: String,
   pub record_videos: String,
   pub start_time: DateTime,
   pub end_time: DateTime,

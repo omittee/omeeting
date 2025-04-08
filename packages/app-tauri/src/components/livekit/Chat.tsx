@@ -5,7 +5,7 @@ import {
   CardFooter,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { userId } from '@/constants'
+import { userIdKey } from '@/constants'
 import { useVadAsr } from '@/hooks/use-vad-asr'
 import { cn } from '@/lib/utils'
 import { useChat } from '@livekit/components-react'
@@ -17,7 +17,7 @@ import { ScrollArea } from '../ui/scroll-area'
 import { Switch } from '../ui/switch'
 
 export default function Chat() {
-  const username = localStorage.getItem(userId) ?? ''
+  const username = localStorage.getItem(userIdKey) ?? ''
   const [input, setInput] = useState('')
 
   const { send, chatMessages, isSending } = useChat()
@@ -49,7 +49,7 @@ export default function Chat() {
       <DrawerContent>
         <DrawerTitle className="py-2">
           <div className="w-full flex justify-center">
-            <Switch className='mr-2' onCheckedChange={switchAsr} disabled={!isInitialized} />
+            <Switch className="mr-2" onCheckedChange={switchAsr} disabled={!isInitialized} />
             { isInitialized
               ? '开启 AI 语音识别'
               : (

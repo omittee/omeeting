@@ -8,4 +8,4 @@ export type Filter = { filter: string, };
 
 export type LiveKitEgressInfo = { egress_id: string, };
 
-export type LiveKitToken = { livekit_token: string, };
+export type LiveKitToken = { room_id: string, livekit_token: string, };

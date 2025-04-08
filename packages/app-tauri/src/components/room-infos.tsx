@@ -2,14 +2,14 @@ import type { RoomNode } from '@/types/room'
 import { updateRoom } from '@/api/room'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import { DeleteIcon, EditIcon, ShareIcon, Trash2Icon } from 'lucide-react'
+import { DeleteIcon, EditIcon, ShareIcon, Trash2Icon, Tv2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { RoomForm } from './room-form'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
-import { Dialog, DialogContent, DialogTitle } from './ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 
 async function handleShare({ code, time, admin }: { code: string, time: string, admin: string }) {
@@ -52,7 +52,7 @@ export function RoomInfos({
   return (
     <div className={cn('h-full mt-4 pt-4', className)}>
       {
-        data.map(({ id, code, start_time, end_time, users_ids, is_canceled, admin, }) => {
+        data.map(({ id, code, start_time, end_time, users_ids, is_canceled, admin, record_videos, video_base }) => {
           const time = `${format(new Date(start_time * 1000), 'yyyy-MM-dd HH:mm')} ~ ${format(new Date(end_time * 1000), 'yyyy-MM-dd HH:mm')}`
           return (
             <Card className="mb-4" key={id}>
@@ -106,6 +106,35 @@ export function RoomInfos({
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+
+                  <Dialog>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                            <Tv2Icon className={ record_videos ? '' : 'text-zinc-400' }/>
+                    </DialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>查看录屏</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    <DialogContent>
+                      <DialogTitle>查看录屏</DialogTitle>
+                      <div className="w-full flex flex-col gap-4">
+                        {
+                          record_videos.split(';').filter(Boolean).map((r) => (
+                            <div key={r} >
+                              <div className='mb-2'>{r}</div>
+                              <video src={`${video_base}/${r}`} controls></video>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
                 </div>
                 <Button size="sm" disabled={is_canceled} onClick={() => onJoinRoom(code)}>进入会议</Button>
               </CardFooter>

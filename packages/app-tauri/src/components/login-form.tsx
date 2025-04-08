@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { authToken, userId } from '@/constants'
+import { authTokenKey, userIdKey } from '@/constants'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -21,7 +21,7 @@ export function LoginForm({
   onFinished,
   ...props
 }: React.ComponentPropsWithoutRef<'div'> & { isEdit?: boolean, onFinished?: () => void }) {
-  const [username, setUsername] = useState(localStorage.getItem(userId) ?? '')
+  const [username, setUsername] = useState(localStorage.getItem(userIdKey) ?? '')
   const [password0, setPassword0] = useState('')
   const [password1, setPassword1] = useState('')
   const [password2, setPassword2] = useState('')
@@ -30,8 +30,8 @@ export function LoginForm({
   const handleSignIn = async (successTitle: string = '登录成功') => {
     const res = await login({ id: username, password: password1 })
     if (res?.data?.auth_token) {
-      localStorage.setItem(authToken, res.data.auth_token)
-      localStorage.setItem(userId, username)
+      localStorage.setItem(authTokenKey, res.data.auth_token)
+      localStorage.setItem(userIdKey, username)
       toast.success(successTitle, {
         position: 'top-center',
       })

@@ -1,8 +1,8 @@
 import type { BaseResponse } from '@/types/base'
-import { authToken } from '@/constants'
+import { authTokenKey } from '@/constants'
 import { toast } from 'sonner'
 
-const base = `${import.meta.env.DEV ? '' : import.meta.env.VITE_ServerUrl}`
+const base = `${import.meta.env.VITE_ServerUrl}`
 
 export function createRequest<Req, Ret extends BaseResponse>({
   url,
@@ -17,7 +17,7 @@ export function createRequest<Req, Ret extends BaseResponse>({
 }) {
   return async (data: Req, path?: string) => {
     if (needAuth) {
-      const token = localStorage.getItem(authToken)
+      const token = localStorage.getItem(authTokenKey)
       if (!token) {
         return
       }

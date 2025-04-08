@@ -9,16 +9,9 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
-  useNavigate,
-  useRoutes,
 } from 'react-router'
 import { Toaster } from 'sonner'
-// import appVadAsr from './assets/vad-asr/app-vad-asr.js?url'
-// import sherpaOnnxAsr from './assets/vad-asr/sherpa-onnx-asr.js?url'
-// import sherpaOnnxVad from './assets/vad-asr/sherpa-onnx-vad.js?url'
-// import sherpaOnnxData from './assets/vad-asr/sherpa-onnx-wasm-main-vad-asr.data?url'
-// import sherpaOnnxModel from './assets/vad-asr/sherpa-onnx-wasm-main-vad-asr.js?url'
-import { authToken, userId } from './constants'
+import { authTokenKey, userIdKey } from './constants'
 import stylesheet from './index.css?url'
 import '@livekit/components-styles'
 
@@ -51,7 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const location = useLocation()
-  if (!localStorage.getItem(authToken) && location.pathname !== '/auth') {
+  if (!localStorage.getItem(authTokenKey) && location.pathname !== '/auth') {
     return <Navigate to="/auth" replace />
   }
   return (

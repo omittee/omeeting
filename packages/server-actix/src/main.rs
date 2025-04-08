@@ -34,15 +34,16 @@ async fn main() -> std::io::Result<()> {
     .unwrap();
   ssl_builder.set_certificate_chain_file("cert.pem").unwrap();
 
-
   let livekit_url = env::var("LIVEKIT_URL").expect("LIVEKIT_URL must be set in .env file");
-  let mut client = EgressClient::new(&livekit_url).unwrap();
+  let livekit_key = env::var("LIVEKIT_API_KEY").expect("LIVEKIT_API_KEY must be set in .env file");
+  let livekit_secret =
+    env::var("LIVEKIT_API_SECRET").expect("LIVEKIT_API_SECRET must be set in .env file");
+  let mut client = EgressClient::with_api_key(&livekit_url, &livekit_key, &livekit_secret);
   let state = AppState {
     jwt_auth_secret: env::var("JWT_SECRET").expect("JWT_SECRET must be set in .env file"),
     db_conn: db.unwrap(),
-    livekit_key: env::var("LIVEKIT_API_KEY").expect("LIVEKIT_API_KEY must be set in .env file"),
-    livekit_secret: env::var("LIVEKIT_API_SECRET")
-      .expect("LIVEKIT_API_SECRET must be set in .env file"),
+    livekit_key,
+    livekit_secret,
     livekit_url,
     livekit_egress_client: Arc::new(Mutex::new(client)),
     s3_access_key: env::var("S3_STORAGE_ACCESS_KEY")
@@ -51,6 +52,7 @@ async fn main() -> std::io::Result<()> {
     s3_endpoint: env::var("S3_STORAGE_ENDPOINT")
       .expect("S3_STORAGE_ENDPOINT must be set in .env file"),
     s3_bucket: env::var("S3_STORAGE_BUCKET").expect("S3_STORAGE_BUCKET must be set in .env file"),
+    s3_public_url: env::var("S3_PUBLIC_URL").expect("S3_PUBLIC_URL must be set in .env file"),
     gpt_api_key: env::var("GPT_API_KEY").expect("GPT_API_KEY must be set in .env file"),
     gpt_base_url: env::var("GPT_BASE_URL").expect("GPT_BASE_URL must be set in .env file"),
   };

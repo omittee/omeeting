@@ -50,7 +50,7 @@ export function DateTimePicker({
             {dateTime ? dateTime.toLocaleString() : <span>选择日期时间</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
+        <PopoverContent className="w-auto p-0 z-[99]">
           <TimePicker
             time={timeValue}
             labelName='设置时间:'

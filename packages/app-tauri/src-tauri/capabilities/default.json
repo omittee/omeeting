@@ -6,10 +6,6 @@
     "main"
   ],
   "permissions": [
-    {
-      "identifier": "core:default",
-      "allow": [{ "url": "https://**" }, { "url": "http://**" }]
-    },
     "core:default",
     "opener:default"
   ]
