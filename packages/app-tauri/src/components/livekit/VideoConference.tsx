@@ -168,8 +168,8 @@ export default function VideoConference({
       <div className="w-full h-full flex flex-col justify-center items-center">
         <div className="flex justify-center items-center flex-1 w-full h-full">
           <div className="flex flex-col justify-center w-full h-full gap-3">
-            {focusTrack && <ParticipantTile trackRef={focusTrack} />}
-            <Carousel className="w-7/8 ">
+            {focusTrack ? <ParticipantTile trackRef={focusTrack} /> : carouselTracks[0] && <ParticipantTile trackRef={carouselTracks[0]} />}
+            {/* <Carousel className="w-7/8 ">
               <CarouselContent>
                 <Tracks tracks={carouselTracks}>
                   <CarouselItem>
@@ -177,7 +177,13 @@ export default function VideoConference({
                   </CarouselItem>
                 </Tracks>
               </CarouselContent>
-            </Carousel>
+            </Carousel> */}
+            <div className="flex justify-start gap-1 overflow-x-auto">
+              <Tracks tracks={carouselTracks}>
+                <ParticipantTile className="w-[150px] h-[150px]" />
+              </Tracks>
+            </div>
+
           </div>
 
         </div>

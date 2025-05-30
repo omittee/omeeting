@@ -29,7 +29,7 @@ export function RoomInfos({
   data,
   className,
   onJoinRoom,
-  onFinished
+  onFinished,
 }: {
   data: RoomNode[]
   className: string
@@ -95,8 +95,9 @@ export function RoomInfos({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <EditIcon onClick={async () => {
-                          if (is_canceled) return
-                          setCurData({ id, start_time, end_time, users_ids, admin });
+                          if (is_canceled)
+                            return
+                          setCurData({ id, start_time, end_time, users_ids, admin })
                           setIsDialogOpen(true)
                         }}
                         />
@@ -108,25 +109,25 @@ export function RoomInfos({
                   </TooltipProvider>
 
                   <Dialog>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                            <Tv2Icon className={ record_videos ? '' : 'text-zinc-400' }/>
-                    </DialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>查看录屏</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DialogTrigger asChild disabled={!record_videos}>
+                            <Tv2Icon className={record_videos ? '' : 'text-zinc-400'} />
+                          </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>查看录屏</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <DialogContent>
                       <DialogTitle>查看录屏</DialogTitle>
                       <div className="w-full flex flex-col gap-4">
                         {
-                          record_videos.split(';').filter(Boolean).map((r) => (
-                            <div key={r} >
-                              <div className='mb-2'>{r}</div>
+                          record_videos.split(';').filter(Boolean).map(r => (
+                            <div key={r}>
+                              <div className="mb-2">{r}</div>
                               <video src={`${video_base}/${r}`} controls></video>
                             </div>
                           ))
@@ -134,7 +135,7 @@ export function RoomInfos({
                       </div>
                     </DialogContent>
                   </Dialog>
-                  
+
                 </div>
                 <Button size="sm" disabled={is_canceled} onClick={() => onJoinRoom(code)}>进入会议</Button>
               </CardFooter>
@@ -145,7 +146,7 @@ export function RoomInfos({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogTitle></DialogTitle>
-          <RoomForm isCreating={false} close={() => setIsDialogOpen(false)} data={curData} onFinished={onFinished}/>
+          <RoomForm isCreating={false} close={() => setIsDialogOpen(false)} data={curData} onFinished={onFinished} />
         </DialogContent>
       </Dialog>
     </div>

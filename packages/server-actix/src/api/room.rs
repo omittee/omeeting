@@ -562,7 +562,6 @@ async fn update_room(
   .await
   .map_or_else(
     |_| {
-      debug!("ccc");
       Ok(web::Json(BaseResponse {
         ret: -1,
         msg: "会议更新失败".to_string(),
